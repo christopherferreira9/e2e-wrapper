@@ -115,9 +115,10 @@ jobs:
           }
           EOF
           
-          # Create version-specific redirect page
-          mkdir -p docs/versions
-          cat > docs/versions/index.md << EOF
+          # Only create versions page for actual releases (not dev builds)
+          if [[ "${{ steps.version.outputs.version }}" != "dev" ]]; then
+            mkdir -p docs/versions
+            cat > docs/versions/index.md << EOF
           # Available Versions
           
           ## Latest Version
@@ -126,9 +127,9 @@ jobs:
           ## All Versions
           - [v${{ steps.version.outputs.version }}](/e2e-wrapper/v${{ steps.version.outputs.version }}/)
           
-          ## Development
-          - [Development Build](/e2e-wrapper/dev/) (Latest main branch)
+          Visit the main documentation site to see all available versions.
           EOF
+          fi
 
       - name: Build VitePress site
         env:

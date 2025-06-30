@@ -215,7 +215,23 @@ pnpm build
 
 # Run tests
 pnpm test
+
+# Run tests with coverage
+pnpm test:coverage
+
+# Type checking
+pnpm type-check
 ```
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+- **CI**: Tests run on all PRs and pushes to main/develop
+- **Release**: Manual releases via GitHub Actions workflow
+- **Dependabot**: Automatic dependency updates
+
+See [CI/CD Documentation](./docs/CI_CD.md) for detailed setup and usage instructions.
 
 ## Contributing
 

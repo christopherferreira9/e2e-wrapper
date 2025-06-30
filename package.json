@@ -7,10 +7,15 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
+    "test:coverage": "jest --coverage",
+    "type-check": "tsc --noEmit",
     "prepublishOnly": "pnpm run build",
     "prepare": "husky install",
     "commit": "cz",
-    "lint:commit": "commitlint --edit"
+    "lint:commit": "commitlint --edit",
+    "release:patch": "npm version patch && git push origin main --tags",
+    "release:minor": "npm version minor && git push origin main --tags",
+    "release:major": "npm version major && git push origin main --tags"
   },
   "keywords": [
     "e2e",

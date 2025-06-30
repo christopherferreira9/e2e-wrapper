@@ -1,0 +1,130 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0, 1.1.0, 2.0.0)'
+        required: true
+        type: string
+      release_type:
+        description: 'Type of release'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - prerelease
+      prerelease_tag:
+        description: 'Prerelease tag (e.g., alpha, beta, rc)'
+        required: false
+        type: string
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Build project
+        run: pnpm build
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update version
+        run: |
+          if [ "${{ inputs.release_type }}" = "prerelease" ]; then
+            if [ -n "${{ inputs.prerelease_tag }}" ]; then
+              npm version ${{ inputs.version }}-${{ inputs.prerelease_tag }} --no-git-tag-version
+            else
+              npm version ${{ inputs.version }}-alpha --no-git-tag-version
+            fi
+          else
+            npm version ${{ inputs.version }} --no-git-tag-version
+          fi
+
+      - name: Get package version
+        id: package-version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          if [ "${{ inputs.release_type }}" = "prerelease" ]; then
+            echo "changelog=Prerelease ${{ steps.package-version.outputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "changelog=Release ${{ steps.package-version.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit version bump
+        run: |
+          git add package.json
+          git commit -m "chore: Bump version to ${{ steps.package-version.outputs.version }}"
+          git push
+
+      - name: Create Git tag
+        run: |
+          git tag v${{ steps.package-version.outputs.version }}
+          git push origin v${{ steps.package-version.outputs.version }}
+
+      - name: Create GitHub release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.package-version.outputs.version }}
+          release_name: Release v${{ steps.package-version.outputs.version }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          prerelease: ${{ inputs.release_type == 'prerelease' }}
+
+      - name: Publish to npm
+        run: |
+          if [ "${{ inputs.release_type }}" = "prerelease" ]; then
+            if [ -n "${{ inputs.prerelease_tag }}" ]; then
+              pnpm publish --tag ${{ inputs.prerelease_tag }} --access public
+            else
+              pnpm publish --tag alpha --access public
+            fi
+          else
+            pnpm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create release summary
+        run: |
+          echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.package-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Type**: ${{ inputs.release_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **NPM Package**: [e2e-wrapper@${{ steps.package-version.outputs.version }}](https://www.npmjs.com/package/e2e-wrapper)" >> $GITHUB_STEP_SUMMARY
+          echo "- **GitHub Release**: [v${{ steps.package-version.outputs.version }}](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.package-version.outputs.version }})" >> $GITHUB_STEP_SUMMARY 

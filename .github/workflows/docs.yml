@@ -80,10 +80,14 @@ jobs:
         id: version
         run: |
           if [[ "${{ github.event_name }}" == "release" ]]; then
+            # Strip 'v' prefix from release tag if present
             VERSION="${{ github.event.release.tag_name }}"
+            VERSION=${VERSION#v}
             IS_LATEST=true
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Strip 'v' prefix from manual input if present
             VERSION="${{ github.event.inputs.version }}"
+            VERSION=${VERSION#v}
             IS_LATEST="${{ github.event.inputs.is_latest }}"
           else
             VERSION="dev"
@@ -115,21 +119,9 @@ jobs:
           }
           EOF
           
-          # Only create versions page for actual releases (not dev builds)
-          if [[ "${{ steps.version.outputs.version }}" != "dev" ]]; then
-            mkdir -p docs/versions
-            cat > docs/versions/index.md << EOF
-          # Available Versions
-          
-          ## Latest Version
-          - [v${{ steps.version.outputs.version }}](/e2e-wrapper/) (Latest)
-          
-          ## All Versions
-          - [v${{ steps.version.outputs.version }}](/e2e-wrapper/v${{ steps.version.outputs.version }}/)
-          
-          Visit the main documentation site to see all available versions.
-          EOF
-          fi
+          # Note: Versions page removed to avoid dead link issues
+          # The versions.json file provides version information for the frontend
+          echo "Versions manifest generated successfully"
 
       - name: Build VitePress site
         env:

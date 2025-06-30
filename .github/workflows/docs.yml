@@ -1,0 +1,175 @@
+name: Deploy Documentation
+
+on:
+  # Trigger on releases
+  release:
+    types: [published]
+  
+  # Allow manual deployment
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., 1.0.0)'
+        required: true
+        type: string
+      is_latest:
+        description: 'Deploy as latest version'
+        required: true
+        type: boolean
+        default: true
+
+  # Deploy latest docs on main branch changes (for development)
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'src/**'
+      - 'package.json'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # Build job
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Need full history for git-based features
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build TypeScript
+        run: pnpm run build
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            IS_LATEST=true
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            IS_LATEST="${{ github.event.inputs.is_latest }}"
+          else
+            VERSION="dev"
+            IS_LATEST=true
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "is_latest=${IS_LATEST}" >> $GITHUB_OUTPUT
+          echo "Deploying version: ${VERSION} (latest: ${IS_LATEST})"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Generate versions manifest
+        run: |
+          mkdir -p docs/public/versions
+          
+          # Create versions.json with available versions
+          cat > docs/public/versions/versions.json << EOF
+          {
+            "latest": "${{ steps.version.outputs.version }}",
+            "versions": [
+              {
+                "version": "${{ steps.version.outputs.version }}",
+                "title": "v${{ steps.version.outputs.version }}",
+                "path": "/v${{ steps.version.outputs.version }}/",
+                "isLatest": ${{ steps.version.outputs.is_latest }}
+              }
+            ]
+          }
+          EOF
+          
+          # Create version-specific redirect page
+          mkdir -p docs/versions
+          cat > docs/versions/index.md << EOF
+          # Available Versions
+          
+          ## Latest Version
+          - [v${{ steps.version.outputs.version }}](/e2e-wrapper/) (Latest)
+          
+          ## All Versions
+          - [v${{ steps.version.outputs.version }}](/e2e-wrapper/v${{ steps.version.outputs.version }}/)
+          
+          ## Development
+          - [Development Build](/e2e-wrapper/dev/) (Latest main branch)
+          EOF
+
+      - name: Build VitePress site
+        env:
+          DOCS_VERSION: ${{ steps.version.outputs.version }}
+        run: pnpm run docs:build
+
+      - name: Setup versioned deployment structure
+        run: |
+          # Create the deployment structure
+          mkdir -p dist-versioned
+          
+          # Copy main build to version-specific directory
+          cp -r docs/.vitepress/dist/* dist-versioned/
+          
+          # If this is the latest version, also copy to root
+          if [[ "${{ steps.version.outputs.is_latest }}" == "true" ]]; then
+            echo "Deploying as latest version"
+            # The main deployment goes to root (already in dist-versioned)
+          fi
+          
+          # Create version-specific directory
+          mkdir -p dist-versioned/v${{ steps.version.outputs.version }}
+          cp -r docs/.vitepress/dist/* dist-versioned/v${{ steps.version.outputs.version }}/
+          
+          # Update base path for versioned docs
+          find dist-versioned/v${{ steps.version.outputs.version }} -name "*.html" -exec sed -i 's|/e2e-wrapper/|/e2e-wrapper/v${{ steps.version.outputs.version }}/|g' {} \;
+          find dist-versioned/v${{ steps.version.outputs.version }} -name "*.js" -exec sed -i 's|/e2e-wrapper/|/e2e-wrapper/v${{ steps.version.outputs.version }}/|g' {} \;
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-versioned
+
+  # Deployment job
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4 

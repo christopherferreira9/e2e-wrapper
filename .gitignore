@@ -134,4 +134,4 @@ appium.log
 
 # macOS
 .AppleDouble
-.LSOverride 
+.LSOverride docs/.vitepress/cache/

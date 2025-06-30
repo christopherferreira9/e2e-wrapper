@@ -4,10 +4,11 @@
   "description": "A generic abstraction layer for end-to-end testing frameworks with builder pattern support",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "type": "module",
   "scripts": {
     "build": "tsc",
-    "test": "jest",
-    "test:coverage": "jest --coverage",
+    "test": "jest --config jest.config.cjs",
+    "test:coverage": "jest --config jest.config.cjs --coverage",
     "type-check": "tsc --noEmit",
     "prepublishOnly": "pnpm run build",
     "prepare": "husky install",
@@ -15,7 +16,10 @@
     "lint:commit": "commitlint --edit",
     "release:patch": "npm version patch && git push origin main --tags",
     "release:minor": "npm version minor && git push origin main --tags",
-    "release:major": "npm version major && git push origin main --tags"
+    "release:major": "npm version major && git push origin main --tags",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "keywords": [
     "e2e",
@@ -38,7 +42,9 @@
     "@commitlint/config-conventional": "^18.4.3",
     "husky": "^8.0.3",
     "commitizen": "^4.3.0",
-    "cz-conventional-changelog": "^3.3.0"
+    "cz-conventional-changelog": "^3.3.0",
+    "vitepress": "^1.0.0",
+    "vue": "^3.4.0"
   },
   "dependencies": {
     "detox": "^20.11.2"

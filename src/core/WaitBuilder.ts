@@ -1,5 +1,5 @@
-import { IWaitBuilder, ElementSelector, WaitOptions, IElementDriver, IWaitCondition } from '../types';
-import { VisibleCondition, EnabledCondition, ExistsCondition } from './WaitCondition';
+import { IWaitBuilder, ElementSelector, WaitOptions, IElementDriver, IWaitCondition, CustomConditionOptions } from '../types';
+import { VisibleCondition, EnabledCondition, ExistsCondition, CustomCondition } from './WaitCondition';
 
 export class WaitBuilder implements IWaitBuilder {
   private conditions: IWaitCondition[] = [];
@@ -25,6 +25,12 @@ export class WaitBuilder implements IWaitBuilder {
 
   forExists(options?: WaitOptions): IWaitBuilder {
     const condition = new ExistsCondition(this.selector, this.driver, options);
+    this.conditions.push(condition);
+    return this;
+  }
+
+  forCustom(conditionOptions: CustomConditionOptions, options?: WaitOptions): IWaitBuilder {
+    const condition = new CustomCondition(this.selector, this.driver, conditionOptions, options);
     this.conditions.push(condition);
     return this;
   }

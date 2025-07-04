@@ -5,6 +5,9 @@ import { E2EWrapper } from '../E2EWrapper';
 // Mock driver for testing
 class MockElementDriver extends BaseElementDriver {
   private mockStates: { [key: string]: boolean } = {};
+  private mockAttributes: { [key: string]: { [attr: string]: string } } = {};
+  private mockProperties: { [key: string]: { [prop: string]: any } } = {};
+  private mockTexts: { [key: string]: string } = {};
 
   constructor() {
     super(TestFramework.PLAYWRIGHT);
@@ -14,6 +17,27 @@ class MockElementDriver extends BaseElementDriver {
     this.mockStates[selector] = exists;
     this.mockStates[`${selector}_visible`] = isVisible;
     this.mockStates[`${selector}_enabled`] = isEnabled;
+  }
+
+  setMockAttribute(selector: string, attributeName: string, value: string) {
+    const key = this.getSelectorKey({ testId: selector });
+    if (!this.mockAttributes[key]) {
+      this.mockAttributes[key] = {};
+    }
+    this.mockAttributes[key][attributeName] = value;
+  }
+
+  setMockProperty(selector: string, propertyName: string, value: any) {
+    const key = this.getSelectorKey({ testId: selector });
+    if (!this.mockProperties[key]) {
+      this.mockProperties[key] = {};
+    }
+    this.mockProperties[key][propertyName] = value;
+  }
+
+  setMockText(selector: string, text: string) {
+    const key = this.getSelectorKey({ testId: selector });
+    this.mockTexts[key] = text;
   }
 
   async isVisible(selector: ElementSelector, options?: WaitOptions): Promise<boolean> {
@@ -29,6 +53,27 @@ class MockElementDriver extends BaseElementDriver {
   async exists(selector: ElementSelector, options?: WaitOptions): Promise<boolean> {
     const key = this.getSelectorKey(selector);
     return this.mockStates[key] || false;
+  }
+
+  async getAttribute(selector: ElementSelector, attributeName: string, options?: WaitOptions): Promise<string | null> {
+    const key = this.getSelectorKey(selector);
+    return this.mockAttributes[key]?.[attributeName] || null;
+  }
+
+  async getProperty(selector: ElementSelector, propertyName: string, options?: WaitOptions): Promise<any> {
+    const key = this.getSelectorKey(selector);
+    return this.mockProperties[key]?.[propertyName] || null;
+  }
+
+  async getText(selector: ElementSelector, options?: WaitOptions): Promise<string> {
+    const key = this.getSelectorKey(selector);
+    return this.mockTexts[key] || '';
+  }
+
+  async getElement(selector: ElementSelector, options?: WaitOptions): Promise<any> {
+    const key = this.getSelectorKey(selector);
+    const exists = this.mockStates[key] || false;
+    return exists ? { mockElement: key } : null;
   }
 
   private getSelectorKey(selector: ElementSelector): string {
@@ -152,6 +197,154 @@ describe('E2EWrapper', () => {
     it('should return the underlying driver', () => {
       const driver = wrapper.getDriver();
       expect(driver).toBe(mockDriver);
+    });
+  });
+
+  describe('Custom Conditions', () => {
+    it('should wait for element to have specific className', async () => {
+      mockDriver.setMockState('test-button', true, true, true);
+      mockDriver.setMockAttribute('test-button', 'class', 'btn primary active');
+      
+      const result = await wrapper
+        .wait()
+        .forCustom({ hasClassName: 'primary' })
+        .execute();
+
+      expect(result).toBe(true);
+    });
+
+    it('should fail when element does not have expected className', async () => {
+      mockDriver.setMockState('test-button', true, true, true);
+      mockDriver.setMockAttribute('test-button', 'class', 'btn secondary');
+      
+      const result = await wrapper
+        .wait()
+        .forCustom({ hasClassName: 'primary' }, { timeout: 1000 })
+        .execute();
+
+      expect(result).toBe(false);
+    }, 10000);
+
+    it('should wait for element to have specific attribute', async () => {
+      mockDriver.setMockState('test-button', true, true, true);
+      mockDriver.setMockAttribute('test-button', 'data-status', 'active');
+      
+      const result = await wrapper
+        .wait()
+        .forCustom({ hasAttribute: { name: 'data-status', value: 'active' } })
+        .execute();
+
+      expect(result).toBe(true);
+    });
+
+    it('should wait for element to have attribute (without checking value)', async () => {
+      mockDriver.setMockState('test-button', true, true, true);
+      mockDriver.setMockAttribute('test-button', 'disabled', 'true');
+      
+      const result = await wrapper
+        .wait()
+        .forCustom({ hasAttribute: { name: 'disabled' } })
+        .execute();
+
+      expect(result).toBe(true);
+    });
+
+    it('should wait for element to contain specific text', async () => {
+      mockDriver.setMockState('test-button', true, true, true);
+      mockDriver.setMockText('test-button', 'Click me to submit');
+      
+      const result = await wrapper
+        .wait()
+        .forCustom({ hasText: 'Click me' })
+        .execute();
+
+      expect(result).toBe(true);
+    });
+
+    it('should wait for element to have specific property', async () => {
+      mockDriver.setMockState('test-button', true, true, true);
+      mockDriver.setMockProperty('test-button', 'checked', true);
+      
+      const result = await wrapper
+        .wait()
+        .forCustom({ hasProperty: { name: 'checked', value: true } })
+        .execute();
+
+      expect(result).toBe(true);
+    });
+
+    it('should wait for custom predicate function', async () => {
+      mockDriver.setMockState('test-button', true, true, true);
+      mockDriver.setMockAttribute('test-button', 'data-count', '5');
+      
+      const result = await wrapper
+        .wait()
+        .forCustom({ 
+          custom: async (element, driver) => {
+            const count = await driver.getAttribute(selector, 'data-count');
+            return parseInt(count || '0') > 3;
+          }
+        })
+        .execute();
+
+      expect(result).toBe(true);
+    });
+
+    it('should chain custom conditions with regular conditions', async () => {
+      mockDriver.setMockState('test-button', true, true, true);
+      mockDriver.setMockAttribute('test-button', 'class', 'btn primary');
+      
+      const result = await wrapper
+        .wait()
+        .forVisible()
+        .forCustom({ hasClassName: 'primary' })
+        .forEnabled()
+        .execute();
+
+      expect(result).toBe(true);
+    });
+
+    it('should fail when element does not exist for custom condition', async () => {
+      mockDriver.setMockState('test-button', true, true, false); // element doesn't exist
+      
+      const result = await wrapper
+        .wait()
+        .forCustom({ hasClassName: 'primary' }, { timeout: 1000 })
+        .execute();
+
+      expect(result).toBe(false);
+    }, 10000);
+
+    it('should get condition descriptions for custom conditions', async () => {
+      const waitBuilder = wrapper
+        .wait()
+        .forCustom({ hasClassName: 'primary' })
+        .forCustom({ hasAttribute: { name: 'data-status', value: 'active' } })
+        .forCustom({ hasText: 'Click me' })
+        .forCustom({ hasProperty: { name: 'checked', value: true } });
+
+      const descriptions = waitBuilder.getConditionDescriptions();
+      
+      expect(descriptions).toEqual([
+        'Wait for element to have class "primary"',
+        'Wait for element to have attribute "data-status" with value "active"',
+        'Wait for element to contain text "Click me"',
+        'Wait for element to have property "checked" with value "true"'
+      ]);
+    });
+
+    it('should handle custom predicate condition description', async () => {
+      const waitBuilder = wrapper
+        .wait()
+        .forCustom({ 
+          custom: async (element, driver) => true 
+        });
+
+      const descriptions = waitBuilder.getConditionDescriptions();
+      
+      expect(descriptions).toEqual([
+        'Wait for custom condition to be met'
+      ]);
     });
   });
 }); 

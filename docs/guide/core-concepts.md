@@ -318,4 +318,239 @@ switch (framework) {
 }
 ```
 
-This enables framework-specific optimizations while maintaining the unified interface. 
+This enables framework-specific optimizations while maintaining the unified interface.
+
+## Wait Builder Pattern
+
+The library uses a fluent builder pattern for waiting conditions. This allows you to chain multiple conditions together:
+
+```typescript
+await wrapper
+  .wait()
+  .forVisible()
+  .forEnabled()
+  .execute();
+```
+
+## Basic Wait Conditions
+
+### Standard Conditions
+
+- `forVisible()` - Wait for element to be visible
+- `forEnabled()` - Wait for element to be enabled 
+- `forExists()` - Wait for element to exist
+
+### Custom Conditions
+
+The library provides powerful custom condition support that allows you to wait for specific element states that go beyond the basic visibility, enabled, and existence checks.
+
+#### Built-in Custom Conditions
+
+##### Wait for Class Name
+Wait for an element to have a specific CSS class:
+
+```typescript
+await wrapper
+  .wait()
+  .forCustom({ hasClassName: 'active' })
+  .execute();
+```
+
+This checks if the element's `class` attribute contains the specified class name.
+
+##### Wait for Attribute
+Wait for an element to have a specific attribute, with optional value checking:
+
+```typescript
+// Wait for attribute to exist (any value)
+await wrapper
+  .wait()
+  .forCustom({ hasAttribute: { name: 'disabled' } })
+  .execute();
+
+// Wait for attribute to have specific value
+await wrapper
+  .wait()
+  .forCustom({ hasAttribute: { name: 'data-status', value: 'active' } })
+  .execute();
+```
+
+##### Wait for Text Content
+Wait for an element to contain specific text:
+
+```typescript
+await wrapper
+  .wait()
+  .forCustom({ hasText: 'Click me' })
+  .execute();
+```
+
+This checks if the element's text content contains the specified string.
+
+##### Wait for Property
+Wait for an element to have a specific property with a given value:
+
+```typescript
+await wrapper
+  .wait()
+  .forCustom({ hasProperty: { name: 'checked', value: true } })
+  .execute();
+```
+
+This is useful for checking form element states like checkbox checked status.
+
+#### Custom Predicate Functions
+
+For maximum flexibility, you can provide your own custom predicate function:
+
+```typescript
+await wrapper
+  .wait()
+  .forCustom({ 
+    custom: async (element, driver) => {
+      // Custom logic using the element and driver
+      const count = await driver.getAttribute(selector, 'data-count');
+      return parseInt(count || '0') > 5;
+    }
+  })
+  .execute();
+```
+
+The predicate function receives:
+- `element`: The actual DOM/native element
+- `driver`: The element driver instance for additional operations
+
+#### Chaining Custom Conditions
+
+Custom conditions can be chained with standard conditions:
+
+```typescript
+await wrapper
+  .wait()
+  .forVisible()
+  .forCustom({ hasClassName: 'loaded' })
+  .forEnabled()
+  .forCustom({ hasAttribute: { name: 'data-ready', value: 'true' } })
+  .execute();
+```
+
+#### Real-world Examples
+
+##### Wait for Loading State
+```typescript
+// Wait for loading spinner to disappear
+await wrapper
+  .wait()
+  .forCustom({ hasClassName: 'loading' })
+  .execute();
+
+// Then wait for content to be ready
+await wrapper
+  .wait()
+  .forCustom({ hasAttribute: { name: 'data-loaded', value: 'true' } })
+  .execute();
+```
+
+##### Wait for Form Validation
+```typescript
+// Wait for form field to be valid
+await wrapper
+  .wait()
+  .forCustom({ hasClassName: 'valid' })
+  .forCustom({ hasAttribute: { name: 'aria-invalid', value: 'false' } })
+  .execute();
+```
+
+##### Wait for Dynamic Content
+```typescript
+// Wait for element to contain specific text after API call
+await wrapper
+  .wait()
+  .forCustom({ hasText: 'Data loaded successfully' })
+  .execute();
+```
+
+##### Complex Custom Conditions
+```typescript
+// Wait for element to have multiple classes and specific data attribute
+await wrapper
+  .wait()
+  .forCustom({
+    custom: async (element, driver) => {
+      const classes = await driver.getAttribute(selector, 'class');
+      const status = await driver.getAttribute(selector, 'data-status');
+      
+      return classes?.includes('active') && 
+             classes?.includes('ready') && 
+             status === 'completed';
+    }
+  })
+  .execute();
+```
+
+#### Error Handling
+
+Custom conditions include built-in error handling:
+
+- If the element doesn't exist, the condition will fail
+- If attribute/property access fails, the condition will fail gracefully
+- Network timeouts and other errors are handled automatically
+
+#### Configuration
+
+Custom conditions support the same timeout and retry options as standard conditions:
+
+```typescript
+await wrapper
+  .wait()
+  .forCustom(
+    { hasClassName: 'loaded' },
+    { timeout: 10000, interval: 500 }
+  )
+  .execute();
+```
+
+## Element Selectors
+
+The library supports various selector types:
+
+- `id` - Element ID
+- `testId` - Test ID (data-testid)
+- `text` - Text content
+- `xpath` - XPath expression
+- `className` - CSS class name
+- `accessibility` - Accessibility label
+- `custom` - Custom selector object
+
+## Framework Support
+
+The library abstracts the underlying testing framework, supporting:
+
+- **Detox** - React Native testing
+- **Appium** - Mobile app testing
+- **Future**: Playwright, Cypress, and other frameworks
+
+## Configuration Options
+
+### Wait Options
+
+```typescript
+interface WaitOptions {
+  timeout?: number;    // Maximum wait time (default: 5000ms)
+  interval?: number;   // Polling interval (default: 100ms)
+  retries?: number;    // Number of retries (default: 3)
+}
+```
+
+### Usage Examples
+
+```typescript
+// Quick timeout
+await wrapper.wait().forVisible({ timeout: 2000 }).execute();
+
+// Slower polling
+await wrapper.wait().forEnabled({ interval: 500 }).execute();
+
+// More retries
+await wrapper.wait().forExists({ retries: 5 }).execute();
+``` 

@@ -36,6 +36,41 @@ export class AppiumElementDriver extends BaseElementDriver {
     }
   }
 
+  async getAttribute(selector: ElementSelector, attributeName: string, options: WaitOptions = {}): Promise<string | null> {
+    try {
+      const element = await this.findElement(selector);
+      return await element.getAttribute(attributeName);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async getProperty(selector: ElementSelector, propertyName: string, options: WaitOptions = {}): Promise<any> {
+    try {
+      const element = await this.findElement(selector);
+      return await element.getProperty(propertyName);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async getText(selector: ElementSelector, options: WaitOptions = {}): Promise<string> {
+    try {
+      const element = await this.findElement(selector);
+      return await element.getText();
+    } catch (error) {
+      return '';
+    }
+  }
+
+  async getElement(selector: ElementSelector, options: WaitOptions = {}): Promise<any> {
+    try {
+      return await this.findElement(selector);
+    } catch (error) {
+      return null;
+    }
+  }
+
   private async findElement(selector: ElementSelector): Promise<any> {
     if (!this.driver) {
       throw new Error('Appium driver not initialized');

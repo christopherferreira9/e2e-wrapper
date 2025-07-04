@@ -56,6 +56,7 @@ export default defineConfig({
           items: [
             { text: 'Builder Pattern', link: '/guide/builder-pattern' },
             { text: 'Wait Conditions', link: '/guide/wait-conditions' },
+            { text: 'Page Object Model', link: '/guide/page-object-model' },
             { text: 'Error Handling', link: '/guide/error-handling' },
             { text: 'Best Practices', link: '/guide/best-practices' }
           ]

@@ -39,6 +39,49 @@ export class DetoxElementDriver extends BaseElementDriver {
     }
   }
 
+  async getAttribute(selector: ElementSelector, attributeName: string, options: WaitOptions = {}): Promise<string | null> {
+    try {
+      const element = this.buildDetoxElement(selector);
+      // Detox doesn't have direct attribute access, so we'll use getAttributes()
+      const attributes = await element.getAttributes();
+      return attributes[attributeName] || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async getProperty(selector: ElementSelector, propertyName: string, options: WaitOptions = {}): Promise<any> {
+    try {
+      const element = this.buildDetoxElement(selector);
+      // Detox properties are typically accessed through getAttributes()
+      const attributes = await element.getAttributes();
+      return attributes[propertyName];
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async getText(selector: ElementSelector, options: WaitOptions = {}): Promise<string> {
+    try {
+      const element = this.buildDetoxElement(selector);
+      const attributes = await element.getAttributes();
+      return attributes.text || attributes.label || '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  async getElement(selector: ElementSelector, options: WaitOptions = {}): Promise<any> {
+    try {
+      const element = this.buildDetoxElement(selector);
+      // Ensure element exists first
+      await element.waitFor().toExist().withTimeout(options.timeout || 5000);
+      return element;
+    } catch (error) {
+      return null;
+    }
+  }
+
   private buildDetoxElement(selector: ElementSelector): any {
     // If detoxElement is already provided, use it
     if (this.detoxElement) {

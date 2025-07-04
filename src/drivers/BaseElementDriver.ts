@@ -10,6 +10,10 @@ export abstract class BaseElementDriver implements IElementDriver {
   abstract isVisible(selector: ElementSelector, options?: WaitOptions): Promise<boolean>;
   abstract isEnabled(selector: ElementSelector, options?: WaitOptions): Promise<boolean>;
   abstract exists(selector: ElementSelector, options?: WaitOptions): Promise<boolean>;
+  abstract getAttribute(selector: ElementSelector, attributeName: string, options?: WaitOptions): Promise<string | null>;
+  abstract getProperty(selector: ElementSelector, propertyName: string, options?: WaitOptions): Promise<any>;
+  abstract getText(selector: ElementSelector, options?: WaitOptions): Promise<string>;
+  abstract getElement(selector: ElementSelector, options?: WaitOptions): Promise<any>;
 
   async waitForState(selector: ElementSelector, state: ElementState, options: WaitOptions = {}): Promise<boolean> {
     const { timeout = 5000, interval = 100 } = options;

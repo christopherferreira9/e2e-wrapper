@@ -98,7 +98,7 @@ jobs:
           echo "Deploying version: ${VERSION} (latest: ${IS_LATEST})"
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
 
       - name: Generate versions manifest
         run: |

@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   dependabot:
+    name: Auto-merge Dependabot PRs
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
     

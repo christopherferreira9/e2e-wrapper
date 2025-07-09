@@ -35,8 +35,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -120,6 +118,21 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Trigger Documentation Deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'docs.yml',
+              ref: 'main',
+              inputs: {
+                version: '${{ steps.package-version.outputs.version }}',
+                is_latest: 'true'
+              }
+            })
+
       - name: Create release summary
         run: |
           echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
@@ -127,4 +140,5 @@ jobs:
           echo "- **Version**: ${{ steps.package-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Type**: ${{ inputs.release_type }}" >> $GITHUB_STEP_SUMMARY
           echo "- **NPM Package**: [e2e-wrapper@${{ steps.package-version.outputs.version }}](https://www.npmjs.com/package/e2e-wrapper)" >> $GITHUB_STEP_SUMMARY
-          echo "- **GitHub Release**: [v${{ steps.package-version.outputs.version }}](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.package-version.outputs.version }})" >> $GITHUB_STEP_SUMMARY 
+          echo "- **GitHub Release**: [v${{ steps.package-version.outputs.version }}](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.package-version.outputs.version }})" >> $GITHUB_STEP_SUMMARY
+          echo "- **Documentation**: [docs site](https://${{ github.repository_owner }}.github.io/e2e-wrapper/)" >> $GITHUB_STEP_SUMMARY 

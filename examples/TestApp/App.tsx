@@ -51,7 +51,7 @@ function App() {
     setTimeout(() => {
       setIsLoading(false);
       Alert.alert('Success', 'Loading completed!');
-    }, 2000);
+    }, 3500);
   };
 
   const toggleTodo = (id: number) => {
@@ -107,7 +107,7 @@ function App() {
         </View>
 
         {/* Counter Section */}
-        <View style={styles.section}>
+        <View style={styles.section} testID="counter-demo-section">
           <Text style={styles.sectionTitle} testID="counter-title">
             Counter Demo
           </Text>
@@ -201,8 +201,8 @@ function App() {
         </View>
 
         {/* Modal Demo Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle} testID="modal-title">
+        <View style={styles.section} testID="modal-demo-section">
+          <Text style={styles.sectionTitle} testID="modal-section-title">
             Modal Demo
           </Text>
           <TouchableOpacity
@@ -215,7 +215,7 @@ function App() {
         </View>
 
         {/* Todo List Section */}
-        <View style={styles.section}>
+        <View style={styles.section} testID="todo-list-section">
           <Text style={styles.sectionTitle} testID="todo-title">
             Todo List Demo
           </Text>

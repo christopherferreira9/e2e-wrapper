@@ -1,4 +1,4 @@
-import { ElementSelector, IElementDriver, WaitOptions, TestFramework } from '../types';
+import { ElementSelector, IElementDriver, WaitOptions, TestFramework, IE2EWrapper } from '../types';
 import { BaseElementDriver } from '../drivers/BaseElementDriver';
 import { E2EWrapper } from '../E2EWrapper';
 
@@ -83,7 +83,7 @@ class MockElementDriver extends BaseElementDriver {
 
 describe('E2EWrapper', () => {
   let mockDriver: MockElementDriver;
-  let wrapper: E2EWrapper;
+  let wrapper: IE2EWrapper;
   let selector: ElementSelector;
 
   beforeEach(() => {
@@ -144,7 +144,7 @@ describe('E2EWrapper', () => {
         .forEnabled()
         .execute();
 
-      expect(result).toBe(true);
+      expect(result).toBe(wrapper);
     });
 
     it('should chain wait conditions - enabled then visible', async () => {
@@ -156,18 +156,17 @@ describe('E2EWrapper', () => {
         .forVisible()
         .execute();
 
-      expect(result).toBe(true);
+      expect(result).toBe(wrapper);
     });
 
     it('should fail when condition is not met', async () => {
       mockDriver.setMockState('test-button', false, true, true);
       
-      const result = await wrapper
+      await expect(wrapper
         .wait()
         .forVisible({ timeout: 1000 })
-        .execute();
-
-      expect(result).toBe(false);
+        .execute()
+      ).rejects.toThrow('Wait condition failed: Wait for element to be visible');
     }, 10000);
 
     it('should throw error when no conditions specified', async () => {
@@ -210,19 +209,18 @@ describe('E2EWrapper', () => {
         .forCustom({ hasClassName: 'primary' })
         .execute();
 
-      expect(result).toBe(true);
+      expect(result).toBe(wrapper);
     });
 
     it('should fail when element does not have expected className', async () => {
       mockDriver.setMockState('test-button', true, true, true);
       mockDriver.setMockAttribute('test-button', 'class', 'btn secondary');
       
-      const result = await wrapper
+      await expect(wrapper
         .wait()
         .forCustom({ hasClassName: 'primary' }, { timeout: 1000 })
-        .execute();
-
-      expect(result).toBe(false);
+        .execute()
+      ).rejects.toThrow('Wait condition failed: Wait for element to have class "primary"');
     }, 10000);
 
     it('should wait for element to have specific attribute', async () => {
@@ -234,7 +232,7 @@ describe('E2EWrapper', () => {
         .forCustom({ hasAttribute: { name: 'data-status', value: 'active' } })
         .execute();
 
-      expect(result).toBe(true);
+      expect(result).toBe(wrapper);
     });
 
     it('should wait for element to have attribute (without checking value)', async () => {
@@ -246,7 +244,7 @@ describe('E2EWrapper', () => {
         .forCustom({ hasAttribute: { name: 'disabled' } })
         .execute();
 
-      expect(result).toBe(true);
+      expect(result).toBe(wrapper);
     });
 
     it('should wait for element to contain specific text', async () => {
@@ -258,7 +256,7 @@ describe('E2EWrapper', () => {
         .forCustom({ hasText: 'Click me' })
         .execute();
 
-      expect(result).toBe(true);
+      expect(result).toBe(wrapper);
     });
 
     it('should wait for element to have specific property', async () => {
@@ -270,7 +268,7 @@ describe('E2EWrapper', () => {
         .forCustom({ hasProperty: { name: 'checked', value: true } })
         .execute();
 
-      expect(result).toBe(true);
+      expect(result).toBe(wrapper);
     });
 
     it('should wait for custom predicate function', async () => {
@@ -287,7 +285,7 @@ describe('E2EWrapper', () => {
         })
         .execute();
 
-      expect(result).toBe(true);
+      expect(result).toBe(wrapper);
     });
 
     it('should chain custom conditions with regular conditions', async () => {
@@ -301,18 +299,17 @@ describe('E2EWrapper', () => {
         .forEnabled()
         .execute();
 
-      expect(result).toBe(true);
+      expect(result).toBe(wrapper);
     });
 
     it('should fail when element does not exist for custom condition', async () => {
       mockDriver.setMockState('test-button', true, true, false); // element doesn't exist
       
-      const result = await wrapper
+      await expect(wrapper
         .wait()
         .forCustom({ hasClassName: 'primary' }, { timeout: 1000 })
-        .execute();
-
-      expect(result).toBe(false);
+        .execute()
+      ).rejects.toThrow('Wait condition failed: Wait for element to have class "primary"');
     }, 10000);
 
     it('should get condition descriptions for custom conditions', async () => {

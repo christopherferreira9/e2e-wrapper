@@ -7,9 +7,13 @@ The `WaitBuilder` class implements the builder pattern for chaining wait conditi
 ```typescript
 interface IWaitBuilder {
   forVisible(options?: WaitOptions): IWaitBuilder
+  forNotVisible(options?: WaitOptions): IWaitBuilder
   forEnabled(options?: WaitOptions): IWaitBuilder  
   forExists(options?: WaitOptions): IWaitBuilder
-  execute(): Promise<boolean>
+  forCustom(conditionOptions: CustomConditionOptions, options?: WaitOptions): IWaitBuilder
+  execute(): Promise<IE2EWrapper>
+  getConditionDescriptions(): string[]
+  clearConditions(): IWaitBuilder
 }
 ```
 
@@ -33,6 +37,27 @@ Adds a visibility condition to the wait chain.
 await wrapper
   .wait()
   .forVisible({ timeout: 10000 })
+  .execute()
+```
+
+### `forNotVisible()`
+
+```typescript
+forNotVisible(options?: WaitOptions): IWaitBuilder
+```
+
+Adds a not-visible condition to the wait chain. Waits for the element to become hidden or disappear.
+
+**Parameters:**
+- `options`: Optional wait configuration
+
+**Returns:** `IWaitBuilder` for method chaining
+
+**Example:**
+```typescript
+await wrapper
+  .wait()
+  .forNotVisible({ timeout: 5000 })
   .execute()
 ```
 
@@ -78,31 +103,92 @@ await wrapper
   .execute()
 ```
 
+### `forCustom()`
+
+```typescript
+forCustom(conditionOptions: CustomConditionOptions, options?: WaitOptions): IWaitBuilder
+```
+
+Adds a custom condition to the wait chain using a user-defined check function.
+
+**Parameters:**
+- `conditionOptions`: Custom condition configuration object
+- `options`: Optional wait configuration
+
+**Returns:** `IWaitBuilder` for method chaining
+
+**Example:**
+```typescript
+await wrapper
+  .wait()
+  .forCustom({
+    checkFunction: async (element) => {
+      const text = await element.getText()
+      return text.includes('Success')
+    },
+    description: 'text contains Success'
+  })
+  .execute()
+```
+
 ### `execute()`
 
 ```typescript
-execute(): Promise<boolean>
+execute(): Promise<IE2EWrapper>
 ```
 
 Executes all chained wait conditions in the order they were added.
 
-**Returns:** Promise resolving to:
-- `true` if all conditions are satisfied within their timeouts
-- `false` if any condition times out
+**Returns:** Promise resolving to the wrapper instance for method chaining
 
-**Throws:** May throw framework-specific errors
+**Throws:** Error if any condition times out or fails
 
 **Example:**
 ```typescript
-const success = await wrapper
+const wrapper = await button
   .wait()
   .forVisible()
   .forEnabled()
   .execute()
 
-if (!success) {
-  console.log('Wait conditions were not met')
-}
+// Can now use the wrapper for further operations
+await wrapper.tap()
+```
+
+### `getConditionDescriptions()`
+
+```typescript
+getConditionDescriptions(): string[]
+```
+
+Returns descriptions of all conditions for debugging purposes.
+
+**Returns:** Array of condition description strings
+
+**Example:**
+```typescript
+const builder = wrapper.wait().forVisible().forEnabled()
+const descriptions = builder.getConditionDescriptions()
+console.log('Waiting for:', descriptions)
+// Output: ['element to be visible', 'element to be enabled']
+```
+
+### `clearConditions()`
+
+```typescript
+clearConditions(): IWaitBuilder
+```
+
+Clears all conditions from the builder, useful for reusing the builder.
+
+**Returns:** `IWaitBuilder` for method chaining
+
+**Example:**
+```typescript
+const builder = wrapper.wait().forVisible().forEnabled()
+builder.clearConditions() // Remove all conditions
+builder.forExists() // Add new condition
+await builder.execute()
 ```
 
 ## Usage Patterns
@@ -111,7 +197,7 @@ if (!success) {
 
 ```typescript
 // Wait for element to be visible
-const isVisible = await wrapper
+const elementWrapper = await wrapper
   .wait()
   .forVisible()
   .execute()
@@ -121,7 +207,7 @@ const isVisible = await wrapper
 
 ```typescript
 // Wait for element to exist, then be visible, then be enabled
-const isReady = await wrapper
+const elementWrapper = await wrapper
   .wait()
   .forExists()
   .forVisible()
@@ -168,6 +254,37 @@ await wrapper
   .execute()
 ```
 
+### Custom Conditions
+
+Create complex wait conditions with custom logic:
+
+```typescript
+await wrapper
+  .wait()
+  .forCustom({
+    checkFunction: async (element) => {
+      // Complex validation logic
+      const attributes = await element.getElement().then(el => el.getAttributes())
+      return attributes.enabled && 
+             attributes.visible && 
+             attributes.text !== 'Loading...'
+    },
+    description: 'element is ready for interaction'
+  }, { timeout: 15000 })
+  .execute()
+```
+
+### Waiting for Element to Disappear
+
+```typescript
+// Wait for loading spinner to disappear
+const loadingSpinner = E2EWrapper.withDetox({ testId: 'loading-spinner' })
+await loadingSpinner
+  .wait()
+  .forNotVisible({ timeout: 10000 })
+  .execute()
+```
+
 ## Execution Behavior
 
 ### Sequential Processing
@@ -177,127 +294,76 @@ Conditions are checked sequentially in the order they were added:
 1. First condition is checked repeatedly until satisfied or timeout
 2. Second condition is checked repeatedly until satisfied or timeout
 3. Continue for all conditions
-4. Return `true` if all conditions pass, `false` if any timeout
+4. Return wrapper instance if all conditions pass
 
 ### Early Termination
 
-If any condition times out, execution stops immediately and returns `false`:
+If any condition times out, execution stops immediately and throws an error:
 
 ```typescript
-const result = await wrapper
-  .wait()
-  .forExists({ timeout: 1000 })     // If this times out...
-  .forVisible({ timeout: 5000 })    // ...this won't be checked
-  .execute()
-
-// result will be false if forExists() times out
+try {
+  const result = await wrapper
+    .wait()
+    .forExists({ timeout: 1000 })     // If this times out...
+    .forVisible({ timeout: 5000 })    // ...this won't be checked
+    .execute()
+} catch (error) {
+  console.error('Wait condition failed:', error.message)
+}
 ```
 
 ### Error Handling
 
 The builder handles two types of issues:
 
-#### Timeouts (Normal)
-```typescript
-const success = await wrapper.wait().forVisible().execute()
-if (!success) {
-  // Handle timeout - this is expected behavior
-  console.log('Element did not become visible in time')
-}
-```
+#### Timeouts (Throws Error)
+When a condition times out, an error is thrown with details about which condition failed.
 
-#### Framework Errors (Exceptions)
-```typescript
-try {
-  await wrapper.wait().forVisible().execute()
-} catch (error) {
-  // Handle framework-specific errors
-  console.error('Framework error:', error.message)
-}
-```
+#### Framework Errors (Throws Error)
+If the underlying framework throws an error during condition checking, it's propagated up to the caller.
 
 ## Advanced Usage
 
-### Conditional Chaining
-
-Build conditions dynamically:
+### Conditional Waiting
 
 ```typescript
-let builder = wrapper.wait().forExists()
+// Only wait for enabled if element is visible
+const isVisible = await wrapper.isVisible()
+const builder = wrapper.wait().forExists()
 
-if (needsVisibility) {
-  builder = builder.forVisible()
+if (isVisible) {
+  builder.forEnabled()
 }
 
-if (needsInteraction) {
-  builder = builder.forEnabled()
-}
-
-const success = await builder.execute()
+await builder.execute()
 ```
 
 ### Reusable Builders
 
-Create reusable wait patterns:
-
 ```typescript
-function createReadyBuilder(wrapper: E2EWrapper<any>) {
-  return wrapper
-    .wait()
-    .forExists({ timeout: 2000 })
-    .forVisible({ timeout: 5000 })
-    .forEnabled({ timeout: 1000 })
-}
+// Create a reusable wait pattern
+const createReadyWait = (element: IE2EWrapper) => 
+  element.wait().forExists().forVisible().forEnabled()
 
-// Use across multiple elements
-const button1Ready = await createReadyBuilder(button1).execute()
-const button2Ready = await createReadyBuilder(button2).execute()
+// Use it multiple times
+await createReadyWait(submitButton).execute()
+await createReadyWait(cancelButton).execute()
 ```
 
-### Framework-Specific Optimizations
+### Complex Custom Conditions
 
 ```typescript
-import { TestFramework } from 'e2e-wrapper'
-
-const wrapper = createDetoxWrapper({ testId: 'button' })
-
-if (wrapper.getFramework() === TestFramework.DETOX) {
-  // Detox is generally fast, use shorter timeouts
-  await wrapper
-    .wait()
-    .forVisible({ timeout: 3000 })
-    .forEnabled({ timeout: 1000 })
-    .execute()
-} else {
-  // Other frameworks might need longer timeouts
-  await wrapper
-    .wait()
-    .forVisible({ timeout: 10000 })
-    .forEnabled({ timeout: 5000 })
-    .execute()
-}
-```
-
-## Implementation Details
-
-### Default Values
-
-When no options are provided, the following defaults are used:
-
-```typescript
-const defaultOptions: WaitOptions = {
-  timeout: 5000,   // 5 seconds
-  interval: 100    // 100 milliseconds
-}
-```
-
-### Memory Efficiency
-
-The builder pattern is implemented efficiently:
-- Conditions are stored as lightweight objects
-- No unnecessary element queries until `execute()` is called
-- Builder instances can be reused (though not recommended)
-
-### Thread Safety
-
-Each builder instance maintains its own state and is safe to use in concurrent scenarios, though individual framework drivers may have their own threading considerations. 
+await wrapper
+  .wait()
+  .forCustom({
+    checkFunction: async (element) => {
+      // Complex validation logic
+      const attributes = await element.getElement().then(el => el.getAttributes())
+      return attributes.enabled && 
+             attributes.visible && 
+             attributes.text !== 'Loading...'
+    },
+    description: 'element is ready for interaction'
+  }, { timeout: 15000 })
+  .execute()
+``` 

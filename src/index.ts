@@ -6,10 +6,13 @@ export {
   TestFramework,
   ElementSelector,
   WaitOptions,
+  ScrollOptions,
+  ScrollDirection,
   ElementState,
   IElementDriver,
   IWaitCondition,
   IWaitBuilder,
+  IScrollBuilder,
   IE2EWrapper
 } from './types';
 
@@ -20,12 +23,17 @@ export { BaseElementDriver } from './drivers/BaseElementDriver';
 
 // Core builder classes
 export { WaitBuilder } from './core/WaitBuilder';
+export { ScrollBuilder } from './core/ScrollBuilder';
 export { 
   WaitCondition, 
   VisibleCondition, 
+  NotVisibleCondition,
   EnabledCondition, 
   ExistsCondition 
 } from './core/WaitCondition';
+
+// Logger utilities
+export { logger, createLogger, Logger, LogLevel } from './utils/logger';
 
 // Import for convenience functions
 import { E2EWrapper } from './E2EWrapper';

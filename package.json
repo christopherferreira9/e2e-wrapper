@@ -4,7 +4,6 @@
   "description": "A generic abstraction layer for end-to-end testing frameworks with builder pattern support",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "type": "module",
   "scripts": {
     "build": "tsc",
     "test": "jest --config jest.config.cjs",

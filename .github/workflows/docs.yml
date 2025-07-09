@@ -40,6 +40,7 @@ concurrency:
 jobs:
   # Build job
   build:
+    name: Build Documentation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -98,7 +99,7 @@ jobs:
           echo "Deploying version: ${VERSION} (latest: ${IS_LATEST})"
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
 
       - name: Generate versions manifest
         run: |
@@ -157,6 +158,7 @@ jobs:
 
   # Deployment job
   deploy:
+    name: Deploy to GitHub Pages
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

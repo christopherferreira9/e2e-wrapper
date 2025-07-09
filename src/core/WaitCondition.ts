@@ -54,6 +54,19 @@ export class VisibleCondition extends WaitCondition {
   }
 }
 
+export class NotVisibleCondition extends WaitCondition {
+  async execute(): Promise<boolean> {
+    return this.waitWithRetry(async () => {
+      const isVisible = await this.driver.isVisible(this.selector, this.options);
+      return !isVisible;
+    });
+  }
+
+  getDescription(): string {
+    return `Wait for element to not be visible`;
+  }
+}
+
 export class EnabledCondition extends WaitCondition {
   async execute(): Promise<boolean> {
     return this.waitWithRetry(() => this.driver.isEnabled(this.selector, this.options));

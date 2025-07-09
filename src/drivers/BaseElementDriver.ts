@@ -14,6 +14,11 @@ export abstract class BaseElementDriver implements IElementDriver {
   abstract getProperty(selector: ElementSelector, propertyName: string, options?: WaitOptions): Promise<any>;
   abstract getText(selector: ElementSelector, options?: WaitOptions): Promise<string>;
   abstract getElement(selector: ElementSelector, options?: WaitOptions): Promise<any>;
+  
+  // Interaction methods (optional for some frameworks)
+  tap?(selector: ElementSelector, options?: WaitOptions): Promise<void>;
+  typeText?(selector: ElementSelector, text: string, options?: WaitOptions): Promise<void>;
+  clearText?(selector: ElementSelector, options?: WaitOptions): Promise<void>;
 
   async waitForState(selector: ElementSelector, state: ElementState, options: WaitOptions = {}): Promise<boolean> {
     const { timeout = 5000, interval = 100 } = options;

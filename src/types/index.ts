@@ -204,3 +204,12 @@ export interface IE2EWrapper {
   getSelector(): ElementSelector;
   withSelector(selector: ElementSelector): IE2EWrapper;
 } 
+
+/**
+ * Framework configuration interface for framework-agnostic usage
+ */
+export interface FrameworkConfig {
+  framework: TestFramework;
+  appiumDriver?: any;
+  detoxElement?: any;
+} 

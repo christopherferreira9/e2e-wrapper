@@ -2,6 +2,68 @@
 
 The `E2EWrapper` class is the main entry point for interacting with elements through the framework-agnostic interface.
 
+## 🚀 Framework-Agnostic Usage (NEW!)
+
+The E2EWrapper now supports **completely framework-agnostic tests**! Write your tests once and run them on any supported framework by simply changing configuration.
+
+### Basic Setup
+
+```typescript
+import { element, configure, TestFramework } from 'e2e-wrapper';
+
+// Configure once at the start of your tests
+beforeAll(() => {
+  configure({
+    framework: TestFramework.DETOX  // or TestFramework.APPIUM
+  });
+});
+
+// Now ALL tests are framework-agnostic!
+it('works with any framework', async () => {
+  const button = element({ testId: 'my-button' });
+  await button.wait().forVisible().execute();
+  await button.tap();
+});
+```
+
+### Environment-Based Configuration
+
+Set framework via environment variable for even more flexibility:
+
+```bash
+# package.json
+{
+  "scripts": {
+    "test:detox": "E2E_FRAMEWORK=detox detox test",
+    "test:appium": "E2E_FRAMEWORK=appium your-appium-command"
+  }
+}
+```
+
+```typescript
+import { configureFromEnvironment } from 'e2e-wrapper';
+
+beforeAll(() => {
+  configureFromEnvironment(); // Uses E2E_FRAMEWORK env var
+});
+```
+
+### Migration Example
+
+Transform framework-specific tests into framework-agnostic ones:
+
+```typescript
+// BEFORE: Framework-specific
+const button = E2EWrapper.withDetox({ testId: 'button' });
+
+// AFTER: Framework-agnostic  
+const button = element({ testId: 'button' });
+```
+
+That's it! All your complex scrolling, waiting, and interaction logic remains identical across frameworks.
+
+---
+
 ## Constructor
 
 ```typescript
@@ -13,6 +75,83 @@ Creates a new E2EWrapper instance with the specified selector and driver.
 **Parameters:**
 - `selector`: Element selector object defining how to find the element
 - `driver`: An implementation of `IElementDriver` (e.g., `DetoxElementDriver`)
+
+## Framework-Agnostic Methods
+
+### `E2EWrapper.configure()`
+
+```typescript
+static configure(config: FrameworkConfig): void
+```
+
+Configure the default framework for all subsequent element creation.
+
+**Parameters:**
+- `config`: Framework configuration object
+
+**Example:**
+```typescript
+E2EWrapper.configure({
+  framework: TestFramework.DETOX
+});
+
+// For Appium:
+E2EWrapper.configure({
+  framework: TestFramework.APPIUM,
+  appiumDriver: yourDriverInstance
+});
+```
+
+### `E2EWrapper.create()` / `E2EWrapper.element()`
+
+```typescript
+static create(selector: ElementSelector): IE2EWrapper
+static element(selector: ElementSelector): IE2EWrapper  // Alias for create()
+```
+
+Create framework-agnostic element wrappers using the configured framework.
+
+**Parameters:**
+- `selector`: Element selector object
+
+**Example:**
+```typescript
+const button = E2EWrapper.create({ testId: 'login-button' });
+// or
+const button = E2EWrapper.element({ testId: 'login-button' });
+```
+
+### `E2EWrapper.setFramework()`
+
+```typescript
+static setFramework(framework: TestFramework, driver?: any): void
+```
+
+Quick framework configuration method.
+
+**Parameters:**
+- `framework`: Framework to use
+- `driver`: Driver instance (required for Appium)
+
+**Example:**
+```typescript
+E2EWrapper.setFramework(TestFramework.DETOX);
+E2EWrapper.setFramework(TestFramework.APPIUM, appiumDriver);
+```
+
+### `E2EWrapper.configureFromEnvironment()`
+
+```typescript
+static configureFromEnvironment(): void
+```
+
+Automatically configure framework from `E2E_FRAMEWORK` environment variable.
+
+**Example:**
+```typescript
+// Set E2E_FRAMEWORK=detox or E2E_FRAMEWORK=appium
+E2EWrapper.configureFromEnvironment();
+```
 
 ## Factory Methods
 
@@ -424,4 +563,109 @@ await dynamicElement
   .forVisible({ timeout: 3000 })
   .forEnabled({ timeout: 2000 })
   .execute()
-``` 
+```
+
+## Framework-Agnostic Usage Examples
+
+### Complete Test Suite Example
+
+```typescript
+import { element, configure, TestFramework, ScrollDirection } from 'e2e-wrapper';
+
+describe('E2E Tests', () => {
+  beforeAll(() => {
+    // Configure once - ALL tests become framework-agnostic!
+    configure({ framework: TestFramework.DETOX });
+  });
+
+  it('should handle complex user interactions', async () => {
+    // Counter interaction
+    const counter = element({ testId: 'counter-display' });
+    const incrementBtn = element({ testId: 'increment-button' });
+    
+    await counter.wait().forVisible().execute();
+    await incrementBtn.tap();
+    
+    const value = await counter.getText();
+    expect(value).toBe('1');
+    
+    // Text input with auto keyboard dismissal
+    const textInput = element({ testId: 'text-input' });
+    await textInput.typeText('Hello World'); // Keyboard auto-dismissed
+    
+    // Advanced scrolling
+    const submitButton = element({ testId: 'submit-button' });
+    await submitButton
+      .scrollTo({
+        direction: ScrollDirection.DOWN,
+        visibilityThreshold: 0.8,
+        centerInViewport: true
+      })
+      .execute();
+    
+    await submitButton.tap();
+    
+    // Custom wait conditions
+    const result = element({ testId: 'result-display' });
+    await result
+      .wait()
+      .forCustom({
+        hasText: 'Success'
+      })
+      .execute();
+  });
+});
+```
+
+### Environment-Based Framework Switching
+
+```bash
+# package.json
+{
+  "scripts": {
+    "test:detox": "E2E_FRAMEWORK=detox detox test",
+    "test:appium": "E2E_FRAMEWORK=appium wdio run",
+    "test:ci": "npm run test:detox"
+  }
+}
+```
+
+```typescript
+// test-setup.js
+import { configureFromEnvironment } from 'e2e-wrapper';
+
+beforeAll(() => {
+  configureFromEnvironment(); // Reads E2E_FRAMEWORK env var
+});
+
+// Same tests work with both frameworks!
+```
+
+### Migration Strategy
+
+**Step 1**: Add framework-agnostic configuration
+```typescript
+// Add to your test setup
+import { configure, TestFramework } from 'e2e-wrapper';
+
+beforeAll(() => {
+  configure({ framework: TestFramework.DETOX }); // Current framework
+});
+```
+
+**Step 2**: Gradually migrate element creation
+```typescript
+// BEFORE
+const button = E2EWrapper.withDetox({ testId: 'button' });
+
+// AFTER  
+const button = element({ testId: 'button' });
+```
+
+**Step 3**: Switch frameworks when ready
+```typescript
+// Just change this one line!
+configure({ framework: TestFramework.APPIUM, appiumDriver: driver });
+```
+
+All your test logic (waits, scrolling, interactions) remains identical! 🎉 

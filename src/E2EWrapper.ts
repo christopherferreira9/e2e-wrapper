@@ -1,4 +1,4 @@
-import { IE2EWrapper, IWaitBuilder, IScrollBuilder, ElementSelector, IElementDriver, TestFramework, WaitOptions, ScrollOptions } from './types';
+import { IE2EWrapper, IWaitBuilder, IScrollBuilder, ElementSelector, IElementDriver, TestFramework, WaitOptions, ScrollOptions, FrameworkConfig } from './types';
 import { WaitBuilder } from './core/WaitBuilder';
 import { ScrollBuilder } from './core/ScrollBuilder';
 import { DetoxElementDriver } from './drivers/DetoxElementDriver';
@@ -7,10 +7,88 @@ import { AppiumElementDriver } from './drivers/AppiumElementDriver';
 export class E2EWrapper implements IE2EWrapper {
   private driver: IElementDriver;
   private selector: ElementSelector;
+  
+  // Static configuration for framework-agnostic usage
+  private static config: FrameworkConfig = {
+    framework: TestFramework.DETOX // Default framework
+  };
 
   constructor(selector: ElementSelector, driver: IElementDriver) {
     this.selector = selector;
     this.driver = driver;
+  }
+
+  /**
+   * Configure the default framework for framework-agnostic usage
+   */
+  static configure(config: FrameworkConfig): void {
+    this.config = { ...config };
+  }
+
+  /**
+   * Set framework via environment variable or direct call
+   */
+  static setFramework(framework: TestFramework, driver?: any): void {
+    this.config.framework = framework;
+    if (framework === TestFramework.APPIUM && driver) {
+      this.config.appiumDriver = driver;
+    }
+  }
+
+  /**
+   * Get current framework configuration
+   */
+  static getFrameworkConfig(): FrameworkConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * Framework-agnostic element creation - uses configured framework
+   */
+  static create(selector: ElementSelector, options?: { framework?: TestFramework; driver?: any; detoxElement?: any }): IE2EWrapper {
+    // Allow per-call override of framework
+    const framework = options?.framework || this.config.framework;
+    
+    switch (framework) {
+      case TestFramework.DETOX:
+        return this.withDetox(selector, options?.detoxElement || this.config.detoxElement);
+      
+      case TestFramework.APPIUM:
+        const appiumDriver = options?.driver || this.config.appiumDriver;
+        if (!appiumDriver) {
+          throw new Error('Appium driver must be provided either in configure() or create() options');
+        }
+        return this.withAppium(selector, appiumDriver);
+      
+      default:
+        throw new Error(`Unsupported framework: ${framework}. Use TestFramework.DETOX or TestFramework.APPIUM`);
+    }
+  }
+
+  /**
+   * Convenience alias for create() - more semantic for element creation
+   */
+  static element(selector: ElementSelector, options?: { framework?: TestFramework; driver?: any; detoxElement?: any }): IE2EWrapper {
+    return this.create(selector, options);
+  }
+
+  /**
+   * Auto-configure from environment variables
+   */
+  static configureFromEnvironment(): void {
+    const frameworkEnv = process.env.E2E_FRAMEWORK?.toLowerCase();
+    
+    switch (frameworkEnv) {
+      case 'detox':
+        this.setFramework(TestFramework.DETOX);
+        break;
+      case 'appium':
+        this.setFramework(TestFramework.APPIUM);
+        break;
+      default:
+        // Keep current configuration if no env var set
+        break;
+    }
   }
 
   /**

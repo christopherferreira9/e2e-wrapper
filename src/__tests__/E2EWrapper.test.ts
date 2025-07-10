@@ -1,85 +1,6 @@
-import { ElementSelector, IElementDriver, WaitOptions, TestFramework, IE2EWrapper } from '../types';
-import { BaseElementDriver } from '../drivers/BaseElementDriver';
+import { ElementSelector, TestFramework, IE2EWrapper } from '../types';
 import { E2EWrapper } from '../E2EWrapper';
-
-// Mock driver for testing
-class MockElementDriver extends BaseElementDriver {
-  private mockStates: { [key: string]: boolean } = {};
-  private mockAttributes: { [key: string]: { [attr: string]: string } } = {};
-  private mockProperties: { [key: string]: { [prop: string]: any } } = {};
-  private mockTexts: { [key: string]: string } = {};
-
-  constructor() {
-    super(TestFramework.PLAYWRIGHT);
-  }
-
-  setMockState(selector: string, isVisible: boolean, isEnabled: boolean, exists: boolean) {
-    this.mockStates[selector] = exists;
-    this.mockStates[`${selector}_visible`] = isVisible;
-    this.mockStates[`${selector}_enabled`] = isEnabled;
-  }
-
-  setMockAttribute(selector: string, attributeName: string, value: string) {
-    const key = this.getSelectorKey({ testId: selector });
-    if (!this.mockAttributes[key]) {
-      this.mockAttributes[key] = {};
-    }
-    this.mockAttributes[key][attributeName] = value;
-  }
-
-  setMockProperty(selector: string, propertyName: string, value: any) {
-    const key = this.getSelectorKey({ testId: selector });
-    if (!this.mockProperties[key]) {
-      this.mockProperties[key] = {};
-    }
-    this.mockProperties[key][propertyName] = value;
-  }
-
-  setMockText(selector: string, text: string) {
-    const key = this.getSelectorKey({ testId: selector });
-    this.mockTexts[key] = text;
-  }
-
-  async isVisible(selector: ElementSelector, options?: WaitOptions): Promise<boolean> {
-    const key = this.getSelectorKey(selector);
-    return this.mockStates[`${key}_visible`] || false;
-  }
-
-  async isEnabled(selector: ElementSelector, options?: WaitOptions): Promise<boolean> {
-    const key = this.getSelectorKey(selector);
-    return this.mockStates[`${key}_enabled`] || false;
-  }
-
-  async exists(selector: ElementSelector, options?: WaitOptions): Promise<boolean> {
-    const key = this.getSelectorKey(selector);
-    return this.mockStates[key] || false;
-  }
-
-  async getAttribute(selector: ElementSelector, attributeName: string, options?: WaitOptions): Promise<string | null> {
-    const key = this.getSelectorKey(selector);
-    return this.mockAttributes[key]?.[attributeName] || null;
-  }
-
-  async getProperty(selector: ElementSelector, propertyName: string, options?: WaitOptions): Promise<any> {
-    const key = this.getSelectorKey(selector);
-    return this.mockProperties[key]?.[propertyName] || null;
-  }
-
-  async getText(selector: ElementSelector, options?: WaitOptions): Promise<string> {
-    const key = this.getSelectorKey(selector);
-    return this.mockTexts[key] || '';
-  }
-
-  async getElement(selector: ElementSelector, options?: WaitOptions): Promise<any> {
-    const key = this.getSelectorKey(selector);
-    const exists = this.mockStates[key] || false;
-    return exists ? { mockElement: key } : null;
-  }
-
-  private getSelectorKey(selector: ElementSelector): string {
-    return selector.testId || selector.id || selector.text || 'default';
-  }
-}
+import { MockElementDriver } from '../test-utils/MockElementDriver';
 
 describe('E2EWrapper', () => {
   let mockDriver: MockElementDriver;
@@ -126,56 +47,6 @@ describe('E2EWrapper', () => {
     });
   });
 
-  describe('Wait Builder Pattern', () => {
-    it('should create wait builder', () => {
-      const waitBuilder = wrapper.wait();
-      expect(waitBuilder).toBeDefined();
-      expect(typeof waitBuilder.forVisible).toBe('function');
-      expect(typeof waitBuilder.forEnabled).toBe('function');
-      expect(typeof waitBuilder.execute).toBe('function');
-    });
-
-    it('should chain wait conditions - visible then enabled', async () => {
-      mockDriver.setMockState('test-button', true, true, true);
-      
-      const result = await wrapper
-        .wait()
-        .forVisible()
-        .forEnabled()
-        .execute();
-
-      expect(result).toBe(wrapper);
-    });
-
-    it('should chain wait conditions - enabled then visible', async () => {
-      mockDriver.setMockState('test-button', true, true, true);
-      
-      const result = await wrapper
-        .wait()
-        .forEnabled()
-        .forVisible()
-        .execute();
-
-      expect(result).toBe(wrapper);
-    });
-
-    it('should fail when condition is not met', async () => {
-      mockDriver.setMockState('test-button', false, true, true);
-      
-      await expect(wrapper
-        .wait()
-        .forVisible({ timeout: 1000 })
-        .execute()
-      ).rejects.toThrow('Wait condition failed: Wait for element to be visible');
-    }, 10000);
-
-    it('should throw error when no conditions specified', async () => {
-      await expect(wrapper.wait().execute()).rejects.toThrow(
-        'No wait conditions specified'
-      );
-    });
-  });
-
   describe('Selector Management', () => {
     it('should return current selector', () => {
       const currentSelector = wrapper.getSelector();
@@ -199,149 +70,272 @@ describe('E2EWrapper', () => {
     });
   });
 
-  describe('Custom Conditions', () => {
-    it('should wait for element to have specific className', async () => {
-      mockDriver.setMockState('test-button', true, true, true);
-      mockDriver.setMockAttribute('test-button', 'class', 'btn primary active');
-      
-      const result = await wrapper
-        .wait()
-        .forCustom({ hasClassName: 'primary' })
-        .execute();
+  describe('Framework-Agnostic API', () => {
+    let originalEnv: string | undefined;
+    let mockAppiumDriver: any;
 
-      expect(result).toBe(wrapper);
+    beforeAll(() => {
+      // Save original environment
+      originalEnv = process.env.E2E_FRAMEWORK;
+      
+      // Create mock Appium driver
+      mockAppiumDriver = {
+        findElement: jest.fn(),
+        getWindowSize: jest.fn(),
+        hideKeyboard: jest.fn()
+      };
     });
 
-    it('should fail when element does not have expected className', async () => {
-      mockDriver.setMockState('test-button', true, true, true);
-      mockDriver.setMockAttribute('test-button', 'class', 'btn secondary');
-      
-      await expect(wrapper
-        .wait()
-        .forCustom({ hasClassName: 'primary' }, { timeout: 1000 })
-        .execute()
-      ).rejects.toThrow('Wait condition failed: Wait for element to have class "primary"');
-    }, 10000);
-
-    it('should wait for element to have specific attribute', async () => {
-      mockDriver.setMockState('test-button', true, true, true);
-      mockDriver.setMockAttribute('test-button', 'data-status', 'active');
-      
-      const result = await wrapper
-        .wait()
-        .forCustom({ hasAttribute: { name: 'data-status', value: 'active' } })
-        .execute();
-
-      expect(result).toBe(wrapper);
+    afterAll(() => {
+      // Restore original environment
+      if (originalEnv !== undefined) {
+        process.env.E2E_FRAMEWORK = originalEnv;
+      } else {
+        delete process.env.E2E_FRAMEWORK;
+      }
     });
 
-    it('should wait for element to have attribute (without checking value)', async () => {
-      mockDriver.setMockState('test-button', true, true, true);
-      mockDriver.setMockAttribute('test-button', 'disabled', 'true');
-      
-      const result = await wrapper
-        .wait()
-        .forCustom({ hasAttribute: { name: 'disabled' } })
-        .execute();
-
-      expect(result).toBe(wrapper);
+    beforeEach(() => {
+      // Reset configuration before each test
+      E2EWrapper.configure({ framework: TestFramework.DETOX });
+      delete process.env.E2E_FRAMEWORK;
     });
 
-    it('should wait for element to contain specific text', async () => {
-      mockDriver.setMockState('test-button', true, true, true);
-      mockDriver.setMockText('test-button', 'Click me to submit');
-      
-      const result = await wrapper
-        .wait()
-        .forCustom({ hasText: 'Click me' })
-        .execute();
-
-      expect(result).toBe(wrapper);
-    });
-
-    it('should wait for element to have specific property', async () => {
-      mockDriver.setMockState('test-button', true, true, true);
-      mockDriver.setMockProperty('test-button', 'checked', true);
-      
-      const result = await wrapper
-        .wait()
-        .forCustom({ hasProperty: { name: 'checked', value: true } })
-        .execute();
-
-      expect(result).toBe(wrapper);
-    });
-
-    it('should wait for custom predicate function', async () => {
-      mockDriver.setMockState('test-button', true, true, true);
-      mockDriver.setMockAttribute('test-button', 'data-count', '5');
-      
-      const result = await wrapper
-        .wait()
-        .forCustom({ 
-          custom: async (element, driver) => {
-            const count = await driver.getAttribute(selector, 'data-count');
-            return parseInt(count || '0') > 3;
-          }
-        })
-        .execute();
-
-      expect(result).toBe(wrapper);
-    });
-
-    it('should chain custom conditions with regular conditions', async () => {
-      mockDriver.setMockState('test-button', true, true, true);
-      mockDriver.setMockAttribute('test-button', 'class', 'btn primary');
-      
-      const result = await wrapper
-        .wait()
-        .forVisible()
-        .forCustom({ hasClassName: 'primary' })
-        .forEnabled()
-        .execute();
-
-      expect(result).toBe(wrapper);
-    });
-
-    it('should fail when element does not exist for custom condition', async () => {
-      mockDriver.setMockState('test-button', true, true, false); // element doesn't exist
-      
-      await expect(wrapper
-        .wait()
-        .forCustom({ hasClassName: 'primary' }, { timeout: 1000 })
-        .execute()
-      ).rejects.toThrow('Wait condition failed: Wait for element to have class "primary"');
-    }, 10000);
-
-    it('should get condition descriptions for custom conditions', async () => {
-      const waitBuilder = wrapper
-        .wait()
-        .forCustom({ hasClassName: 'primary' })
-        .forCustom({ hasAttribute: { name: 'data-status', value: 'active' } })
-        .forCustom({ hasText: 'Click me' })
-        .forCustom({ hasProperty: { name: 'checked', value: true } });
-
-      const descriptions = waitBuilder.getConditionDescriptions();
-      
-      expect(descriptions).toEqual([
-        'Wait for element to have class "primary"',
-        'Wait for element to have attribute "data-status" with value "active"',
-        'Wait for element to contain text "Click me"',
-        'Wait for element to have property "checked" with value "true"'
-      ]);
-    });
-
-    it('should handle custom predicate condition description', async () => {
-      const waitBuilder = wrapper
-        .wait()
-        .forCustom({ 
-          custom: async (element, driver) => true 
+    describe('Configuration Management', () => {
+      it('should configure default framework', () => {
+        E2EWrapper.configure({
+          framework: TestFramework.DETOX
         });
 
-      const descriptions = waitBuilder.getConditionDescriptions();
-      
-      expect(descriptions).toEqual([
-        'Wait for custom condition to be met'
-      ]);
+        const config = E2EWrapper.getFrameworkConfig();
+        expect(config.framework).toBe(TestFramework.DETOX);
+      });
+
+      it('should configure Appium framework with driver', () => {
+        E2EWrapper.configure({
+          framework: TestFramework.APPIUM,
+          appiumDriver: mockAppiumDriver
+        });
+
+        const config = E2EWrapper.getFrameworkConfig();
+        expect(config.framework).toBe(TestFramework.APPIUM);
+        expect(config.appiumDriver).toBe(mockAppiumDriver);
+      });
+
+      it('should set framework using setFramework method', () => {
+        E2EWrapper.setFramework(TestFramework.DETOX);
+        
+        const config = E2EWrapper.getFrameworkConfig();
+        expect(config.framework).toBe(TestFramework.DETOX);
+      });
+
+      it('should set framework with driver using setFramework method', () => {
+        E2EWrapper.setFramework(TestFramework.APPIUM, mockAppiumDriver);
+        
+        const config = E2EWrapper.getFrameworkConfig();
+        expect(config.framework).toBe(TestFramework.APPIUM);
+        expect(config.appiumDriver).toBe(mockAppiumDriver);
+      });
+    });
+
+    describe('Environment Configuration', () => {
+      it('should configure from environment variable - detox', () => {
+        process.env.E2E_FRAMEWORK = 'detox';
+        
+        E2EWrapper.configureFromEnvironment();
+        
+        const config = E2EWrapper.getFrameworkConfig();
+        expect(config.framework).toBe(TestFramework.DETOX);
+      });
+
+      it('should configure from environment variable - appium', () => {
+        process.env.E2E_FRAMEWORK = 'appium';
+        
+        E2EWrapper.configureFromEnvironment();
+        
+        const config = E2EWrapper.getFrameworkConfig();
+        expect(config.framework).toBe(TestFramework.APPIUM);
+      });
+
+      it('should handle uppercase environment variable', () => {
+        process.env.E2E_FRAMEWORK = 'DETOX';
+        
+        E2EWrapper.configureFromEnvironment();
+        
+        const config = E2EWrapper.getFrameworkConfig();
+        expect(config.framework).toBe(TestFramework.DETOX);
+      });
+
+      it('should keep current configuration when environment variable is not set', () => {
+        E2EWrapper.configure({ framework: TestFramework.APPIUM, appiumDriver: mockAppiumDriver });
+        delete process.env.E2E_FRAMEWORK;
+        
+        E2EWrapper.configureFromEnvironment();
+        
+        const config = E2EWrapper.getFrameworkConfig();
+        expect(config.framework).toBe(TestFramework.APPIUM);
+      });
+
+      it('should keep current configuration when environment variable is invalid', () => {
+        E2EWrapper.configure({ framework: TestFramework.DETOX });
+        process.env.E2E_FRAMEWORK = 'invalid-framework';
+        
+        E2EWrapper.configureFromEnvironment();
+        
+        const config = E2EWrapper.getFrameworkConfig();
+        expect(config.framework).toBe(TestFramework.DETOX);
+      });
+    });
+
+    describe('Framework-Agnostic Element Creation', () => {
+      it('should create Detox element when framework is configured as Detox', () => {
+        E2EWrapper.configure({ framework: TestFramework.DETOX });
+        
+        const element = E2EWrapper.create({ testId: 'test-element' });
+        
+        expect(element).toBeInstanceOf(E2EWrapper);
+        expect(element.getDriver().getFramework()).toBe(TestFramework.DETOX);
+      });
+
+      it('should create Appium element when framework is configured as Appium', () => {
+        E2EWrapper.configure({ 
+          framework: TestFramework.APPIUM, 
+          appiumDriver: mockAppiumDriver 
+        });
+        
+        const element = E2EWrapper.create({ testId: 'test-element' });
+        
+        expect(element).toBeInstanceOf(E2EWrapper);
+        expect(element.getDriver().getFramework()).toBe(TestFramework.APPIUM);
+      });
+
+      it('should create element using element() alias', () => {
+        E2EWrapper.configure({ framework: TestFramework.DETOX });
+        
+        const element = E2EWrapper.element({ testId: 'test-element' });
+        
+        expect(element).toBeInstanceOf(E2EWrapper);
+        expect(element.getDriver().getFramework()).toBe(TestFramework.DETOX);
+      });
+
+      it('should allow per-call framework override', () => {
+        E2EWrapper.configure({ framework: TestFramework.DETOX });
+        
+        const element = E2EWrapper.create(
+          { testId: 'test-element' },
+          { framework: TestFramework.APPIUM, driver: mockAppiumDriver }
+        );
+        
+        expect(element.getDriver().getFramework()).toBe(TestFramework.APPIUM);
+      });
+
+      it('should throw error when Appium driver is not provided', () => {
+        E2EWrapper.configure({ framework: TestFramework.APPIUM });
+        
+        expect(() => {
+          E2EWrapper.create({ testId: 'test-element' });
+        }).toThrow('Appium driver must be provided either in configure() or create() options');
+      });
+
+      it('should throw error for unsupported framework', () => {
+        E2EWrapper.configure({ framework: 'unsupported' as any });
+        
+        expect(() => {
+          E2EWrapper.create({ testId: 'test-element' });
+        }).toThrow('Unsupported framework: unsupported');
+      });
+    });
+
+    describe('Framework Switching', () => {
+      it('should switch from Detox to Appium', () => {
+        // Start with Detox
+        E2EWrapper.configure({ framework: TestFramework.DETOX });
+        let element = E2EWrapper.create({ testId: 'test' });
+        expect(element.getDriver().getFramework()).toBe(TestFramework.DETOX);
+        
+        // Switch to Appium
+        E2EWrapper.configure({ 
+          framework: TestFramework.APPIUM, 
+          appiumDriver: mockAppiumDriver 
+        });
+        element = E2EWrapper.create({ testId: 'test' });
+        expect(element.getDriver().getFramework()).toBe(TestFramework.APPIUM);
+      });
+
+      it('should switch from Appium to Detox', () => {
+        // Start with Appium
+        E2EWrapper.configure({ 
+          framework: TestFramework.APPIUM, 
+          appiumDriver: mockAppiumDriver 
+        });
+        let element = E2EWrapper.create({ testId: 'test' });
+        expect(element.getDriver().getFramework()).toBe(TestFramework.APPIUM);
+        
+        // Switch to Detox
+        E2EWrapper.configure({ framework: TestFramework.DETOX });
+        element = E2EWrapper.create({ testId: 'test' });
+        expect(element.getDriver().getFramework()).toBe(TestFramework.DETOX);
+      });
+    });
+
+    describe('Backward Compatibility', () => {
+      it('should maintain existing withDetox() method', () => {
+        const element = E2EWrapper.withDetox({ testId: 'test' });
+        expect(element).toBeInstanceOf(E2EWrapper);
+        expect(element.getDriver().getFramework()).toBe(TestFramework.DETOX);
+      });
+
+      it('should maintain existing withAppium() method', () => {
+        const element = E2EWrapper.withAppium({ testId: 'test' }, mockAppiumDriver);
+        expect(element).toBeInstanceOf(E2EWrapper);
+        expect(element.getDriver().getFramework()).toBe(TestFramework.APPIUM);
+      });
+
+      it('should maintain existing withCustomDriver() method', () => {
+        const customDriver = new MockElementDriver();
+        const element = E2EWrapper.withCustomDriver({ testId: 'test' }, customDriver);
+        expect(element).toBeInstanceOf(E2EWrapper);
+        expect(element.getDriver()).toBe(customDriver);
+      });
+    });
+
+    describe('Configuration Isolation', () => {
+      it('should not affect configuration between different E2EWrapper calls', () => {
+        E2EWrapper.configure({ framework: TestFramework.DETOX });
+        
+        const detoxElement = E2EWrapper.create({ testId: 'detox-test' });
+        const appiumElement = E2EWrapper.create(
+          { testId: 'appium-test' },
+          { framework: TestFramework.APPIUM, driver: mockAppiumDriver }
+        );
+        
+        expect(detoxElement.getDriver().getFramework()).toBe(TestFramework.DETOX);
+        expect(appiumElement.getDriver().getFramework()).toBe(TestFramework.APPIUM);
+        
+        // Global config should remain unchanged
+        const config = E2EWrapper.getFrameworkConfig();
+        expect(config.framework).toBe(TestFramework.DETOX);
+      });
+    });
+
+    describe('Error Handling', () => {
+      it('should provide clear error message for missing Appium driver in configuration', () => {
+        expect(() => {
+          E2EWrapper.configure({ framework: TestFramework.APPIUM });
+          E2EWrapper.create({ testId: 'test' });
+        }).toThrow('Appium driver must be provided either in configure() or create() options');
+      });
+
+      it('should provide clear error message for missing Appium driver in create options', () => {
+        E2EWrapper.configure({ framework: TestFramework.DETOX });
+        
+        expect(() => {
+          E2EWrapper.create(
+            { testId: 'test' },
+            { framework: TestFramework.APPIUM }
+          );
+        }).toThrow('Appium driver must be provided either in configure() or create() options');
+      });
     });
   });
 }); 

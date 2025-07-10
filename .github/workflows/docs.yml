@@ -18,15 +18,6 @@ on:
         type: boolean
         default: true
 
-  # Deploy latest docs on main branch changes (for development)
-  push:
-    branches:
-      - main
-    paths:
-      - 'docs/**'
-      - 'src/**'
-      - 'package.json'
-
 permissions:
   contents: read
   pages: write

@@ -11,7 +11,7 @@ export class MockElementDriver extends BaseElementDriver {
   private mockTexts: { [key: string]: string } = {};
 
   constructor() {
-    super(TestFramework.PLAYWRIGHT);
+    super(TestFramework.DETOX);
   }
 
   setMockState(selector: string, isVisible: boolean, isEnabled: boolean, exists: boolean) {
@@ -70,7 +70,7 @@ export class MockElementDriver extends BaseElementDriver {
   }
 
   getFramework(): TestFramework {
-    return TestFramework.PLAYWRIGHT;
+    return TestFramework.DETOX;
   }
 
   async getAttribute(selector: ElementSelector, attributeName: string, options?: WaitOptions): Promise<string | null> {

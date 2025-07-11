@@ -66,6 +66,36 @@ This document describes the Continuous Integration and Continuous Deployment set
 - Auto-merges approved patch updates
 - Manual review required for minor/major updates
 
+### 4. E2E Tests Workflow (`.github/workflows/e2e-test.yml`)
+
+**Triggers:**
+- Manual trigger via `workflow_dispatch`
+
+**Inputs:**
+- `platform`: Platform to run tests on (`android` or `ios`)
+
+**Jobs:**
+- **e2e-test**: Builds and runs Detox tests for the example app
+  - **Runs on**: `ubuntu-latest` for Android, `macos-latest` for iOS
+  - **Steps:**
+    1. Set up environment (Node.js, PNPM)
+    2. Build e2e-wrapper package
+    3. Platform-specific setup (Android emulator or iOS simulator)
+    4. Build the TestApp for the chosen platform
+    5. Run Detox tests
+    6. Archive test artifacts
+
+**Usage:**
+1. Go to your GitHub repository
+2. Navigate to Actions → E2E Tests workflow
+3. Click "Run workflow"
+4. Select platform (android or ios)
+5. Click "Run workflow"
+
+**Artifacts:**
+- Screenshots of failed tests are automatically captured
+- All artifacts are uploaded and available in the Actions tab
+
 ## 🔧 Setup Requirements
 
 ### GitHub Secrets

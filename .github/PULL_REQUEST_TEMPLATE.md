@@ -1,4 +1,4 @@
-"# Pull Request Template
+# Pull Request Template
 
 ## Description
 
@@ -39,4 +39,3 @@ Please describe the tests that you ran to verify your changes. Provide instructi
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] New and existing unit tests pass locally with my changes
 - [ ] I have checked out the main branch, pulled the latest changes, and created this branch from there
-" 

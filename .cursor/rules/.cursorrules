@@ -10,3 +10,4 @@
         - There should be no need to create new instances unless we're testing stuff
         - When you push new code ready for a pull request, please update the branch with main and don't forget to pull first.
         - Don't change stuff under the examples folder as that is only being used to test the integration of the E2EWrapper. Always ask if I want to make those changes.
+        - We now have a Pull Request template so every time we push code that will result in a pull request, please provide me with the description based on that template. The best way to do it is to create a temporary .md file properly structured so that it gets easier to copy.

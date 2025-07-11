@@ -82,7 +82,10 @@ jobs:
       - name: Install iOS dependencies (iOS)
         if: inputs.platform == 'ios'
         run: |
-          cd examples/TestApp/ios
+          # Install example app dependencies first to make sure React Native is available
+          cd examples/TestApp
+          pnpm install
+          cd ios
           bundle install
           pod install
       

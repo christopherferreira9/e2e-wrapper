@@ -55,27 +55,141 @@ module.exports = {
   configurations: {
     'ios.sim.debug': {
       device: 'simulator',
-      app: 'ios.debug'
+      app: 'ios.debug',
+      artifacts: {
+        rootDir: './artifacts',
+        plugins: {
+          log: { enabled: true },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: true,
+            keepOnlyFailedTestsArtifacts: true,
+            takeWhen: {
+              testStart: false,
+              testDone: true,
+            },
+          },
+          video: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          }
+        }
+      }
     },
     'ios.sim.release': {
       device: 'simulator',
-      app: 'ios.release'
+      app: 'ios.release',
+      artifacts: {
+        rootDir: './artifacts',
+        plugins: {
+          log: { enabled: true },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: true,
+            keepOnlyFailedTestsArtifacts: true,
+            takeWhen: {
+              testStart: false,
+              testDone: true,
+            },
+          },
+          video: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          }
+        }
+      }
     },
     'android.att.debug': {
       device: 'attached',
-      app: 'android.debug'
+      app: 'android.debug',
+      artifacts: {
+        rootDir: './artifacts',
+        plugins: {
+          log: { enabled: true },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: true,
+            keepOnlyFailedTestsArtifacts: true,
+            takeWhen: {
+              testStart: false,
+              testDone: true,
+            },
+          },
+          video: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          }
+        }
+      }
     },
     'android.att.release': {
       device: 'attached',
-      app: 'android.release'
+      app: 'android.release',
+      artifacts: {
+        rootDir: './artifacts',
+        plugins: {
+          log: { enabled: true },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: true,
+            keepOnlyFailedTestsArtifacts: true,
+            takeWhen: {
+              testStart: false,
+              testDone: true,
+            },
+          },
+          video: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          }
+        }
+      }
     },
     'android.emu.debug': {
       device: 'emulator',
-      app: 'android.debug'
+      app: 'android.debug',
+      artifacts: {
+        rootDir: './artifacts',
+        plugins: {
+          log: { enabled: true },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: true,
+            keepOnlyFailedTestsArtifacts: true,
+            takeWhen: {
+              testStart: false,
+              testDone: true,
+            },
+          },
+          video: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          }
+        }
+      }
     },
     'android.emu.release': {
       device: 'emulator',
-      app: 'android.release'
+      app: 'android.release',
+      artifacts: {
+        rootDir: './artifacts',
+        plugins: {
+          log: { enabled: true },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: true,
+            keepOnlyFailedTestsArtifacts: true,
+            takeWhen: {
+              testStart: false,
+              testDone: true,
+            },
+          },
+          video: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          }
+        }
+      }
     }
   }
 }; 

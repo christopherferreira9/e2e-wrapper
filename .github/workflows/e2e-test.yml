@@ -105,11 +105,13 @@ jobs:
 
       - name: Run Detox Tests
         working-directory: examples/TestApp
+        env:
+          E2EWRAPPER_LOG: debug
         run: |
           if [[ "${{ inputs.platform }}" == "android" ]]; then
-            pnpm e2e:android:run
+            pnpm e2e:android:run --debug-synchronization 1000
           else
-            pnpm e2e:ios:run
+            pnpm e2e:ios:run --debug-synchronization 1000
           fi
 
       # Archive test artifacts

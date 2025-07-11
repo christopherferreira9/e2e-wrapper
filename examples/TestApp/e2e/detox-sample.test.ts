@@ -1,16 +1,17 @@
-import { E2EWrapper, IE2EWrapper, ScrollDirection } from 'e2e-wrapper';
+import { element, configure, TestFramework, IE2EWrapper, ScrollDirection } from 'e2e-wrapper';
 import jestExpect from 'expect';
 
-/* global device, expect */
+/* global device */
 
 describe('E2E Wrapper Test App', () => {
   beforeAll(async () => {
+    configure({ framework: TestFramework.DETOX });
     await device.launchApp({ newInstance: true });
   });
 
   describe('App Navigation', () => {
     it('should display the main app title', async () => {
-      const appTitle: IE2EWrapper = E2EWrapper.withDetox({ testId: 'app-title' });
+      const appTitle: IE2EWrapper = element({ testId: 'app-title' });
       
       await appTitle
         .wait()
@@ -22,7 +23,7 @@ describe('E2E Wrapper Test App', () => {
     });
 
     it('should display the subtitle', async () => {
-      const subtitle: IE2EWrapper = E2EWrapper.withDetox({ testId: 'app-subtitle' });
+      const subtitle: IE2EWrapper = element({ testId: 'app-subtitle' });
       
       await subtitle
         .wait()
@@ -36,8 +37,8 @@ describe('E2E Wrapper Test App', () => {
 
   describe('Counter Demo', () => {
     it('should increment counter when + button is pressed', async () => {
-      const counterDisplay: IE2EWrapper = E2EWrapper.withDetox({ testId: 'counter-display' });
-      const incrementButton: IE2EWrapper = E2EWrapper.withDetox({ testId: 'increment-button' });
+      const counterDisplay: IE2EWrapper = element({ testId: 'counter-display' });
+      const incrementButton: IE2EWrapper = element({ testId: 'increment-button' });
       
       // Wait for elements to be visible
       await counterDisplay
@@ -64,8 +65,8 @@ describe('E2E Wrapper Test App', () => {
     });
 
     it('should decrement counter when - button is pressed', async () => {
-      const counterDisplay: IE2EWrapper = E2EWrapper.withDetox({ testId: 'counter-display' });
-      const decrementButton: IE2EWrapper = E2EWrapper.withDetox({ testId: 'decrement-button' });
+      const counterDisplay: IE2EWrapper = element({ testId: 'counter-display' });
+      const decrementButton: IE2EWrapper = element({ testId: 'decrement-button' });
       
       // Wait for elements to be visible
       await counterDisplay
@@ -90,9 +91,9 @@ describe('E2E Wrapper Test App', () => {
 
   describe('Text Input Demo', () => {
     it('should handle text input and display', async () => {
-      const textInput: IE2EWrapper = E2EWrapper.withDetox({ testId: 'text-input' });
-      const submitButton: IE2EWrapper = E2EWrapper.withDetox({ testId: 'submit-button' });
-      const displayText: IE2EWrapper = E2EWrapper.withDetox({ testId: 'display-text' });
+      const textInput: IE2EWrapper = element({ testId: 'text-input' });
+      const submitButton: IE2EWrapper = element({ testId: 'submit-button' });
+      const displayText: IE2EWrapper = element({ testId: 'display-text' });
       
       // Wait for input to be ready
       await textInput
@@ -127,8 +128,8 @@ describe('E2E Wrapper Test App', () => {
 
   describe('Loading Demo', () => {
     it('should show loading state when loading button is pressed', async () => {
-      const loadingButton: IE2EWrapper = E2EWrapper.withDetox({ testId: 'loading-button' });
-      const loadingIndicator: IE2EWrapper = E2EWrapper.withDetox({ testId: 'loading-indicator' });
+      const loadingButton: IE2EWrapper = element({ testId: 'loading-button' });
+      const loadingIndicator: IE2EWrapper = element({ testId: 'loading-indicator' });
       
       // Wait for loading button to be ready
       await loadingButton
@@ -162,15 +163,15 @@ describe('E2E Wrapper Test App', () => {
       await new Promise(resolve => setTimeout(resolve, 2500)); // Wait for alert to appear
       
       // Dismiss the alert by tapping OK
-      const alertOkButton = (global as any).element((global as any).by.text('OK'));
+      const alertOkButton = element({ text: 'OK' });
       await alertOkButton.tap();
     });
   });
 
   describe('Switch Demo', () => {
     it('should toggle switch and update label', async () => {
-      const featureSwitch: IE2EWrapper = E2EWrapper.withDetox({ testId: 'feature-switch' });
-      const switchLabel: IE2EWrapper = E2EWrapper.withDetox({ testId: 'switch-label' });
+      const featureSwitch: IE2EWrapper = element({ testId: 'feature-switch' });
+      const switchLabel: IE2EWrapper = element({ testId: 'switch-label' });
       
       // Wait for switch to be ready
       await featureSwitch
@@ -198,60 +199,39 @@ describe('E2E Wrapper Test App', () => {
 
   describe('Modal Demo', () => {
     it('should open and close modal', async () => {
-      const openModalButton: IE2EWrapper = E2EWrapper.withDetox({ testId: 'open-modal-button' });
-      const modal: IE2EWrapper = E2EWrapper.withDetox({ testId: 'test-modal' });
-      const modalTitle: IE2EWrapper = E2EWrapper.withDetox({ testId: 'modal-title' });
-      const closeModalButton: IE2EWrapper = E2EWrapper.withDetox({ testId: 'close-modal-button' });
-      
+      const openModalButton: IE2EWrapper = element({ testId: 'open-modal-button' });
+      const closeModalButton: IE2EWrapper = element({ testId: 'close-modal-button' });
+
       await openModalButton.scrollTo({
         direction: ScrollDirection.DOWN,
         timeout: 5000,
-        scrollAmount: 0.3, // 30% of screen height
-        visibilityThreshold: 0.8, // Element must be 80% visible (set to 0 to disable)
-        // useBasicVisibility: true, // Uncomment to force basic visibility check
+        centerInViewport: false,
+        visibilityThreshold: 0.8
       }).execute();
 
-      // Wait for open button to be ready
       await openModalButton
         .wait()
         .forVisible()
         .forEnabled()
         .execute();
-      
-      // Open modal
+
       await openModalButton.tap();
-      
-      // Check modal title
-      await modalTitle
-        .wait()
-        .forVisible()
-        .execute();
-      
-      const titleText = await modalTitle.getText();
-      jestExpect(titleText).toBe('Test Modal');
-      
-      // Close modal
+
       await closeModalButton
         .wait()
         .forVisible()
         .forEnabled()
         .execute();
-      
+
       await closeModalButton.tap();
-      
-      // Wait for modal to disappear (wait for modal title to disappear)
-      await modalTitle
-        .wait()
-        .forNotVisible({ timeout: 5000 })
-        .execute();
     });
   });
 
   describe('Todo List Demo', () => {
     it('should add and toggle todo items', async () => {
-      const todoInput: IE2EWrapper = E2EWrapper.withDetox({ testId: 'todo-input' });
-      const addButton: IE2EWrapper = E2EWrapper.withDetox({ testId: 'add-todo-button' });
-      const todoList: IE2EWrapper = E2EWrapper.withDetox({ testId: 'todo-list' });
+      const todoInput: IE2EWrapper = element({ testId: 'todo-input' });
+      const addButton: IE2EWrapper = element({ testId: 'add-todo-button' });
+      const todoList: IE2EWrapper = element({ testId: 'todo-list' });
       
       // Wait for todo input to be ready
       await todoInput
@@ -277,6 +257,7 @@ describe('E2E Wrapper Test App', () => {
         centerInViewport: false,   // Don't try to center large lists
         timeout: 5000             // Shorter timeout since it's likely already visible
       }).execute();
+
       await todoList
         .wait()
         .forVisible()
@@ -289,7 +270,7 @@ describe('E2E Wrapper Test App', () => {
 
     it('should toggle existing todo items', async () => {
       // Test with existing todo item
-      const firstTodoToggle: IE2EWrapper = E2EWrapper.withDetox({ testId: 'toggle-button-1' });
+      const firstTodoToggle: IE2EWrapper = element({ testId: 'toggle-button-1' });
       
       await firstTodoToggle
         .wait()

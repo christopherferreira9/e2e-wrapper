@@ -62,10 +62,6 @@ module.exports = {
           exposeGlobals: true,
         },
       },
-      session: {
-        server: 'http://localhost:8081',
-        sessionId: 'test'
-      },
       artifacts: {
         rootDir: './artifacts',
         plugins: {
@@ -118,10 +114,6 @@ module.exports = {
           exposeGlobals: true,
         },
       },
-      session: {
-        server: 'http://localhost:8081',
-        sessionId: 'test'
-      },
       artifacts: {
         rootDir: './artifacts',
         plugins: {
@@ -173,10 +165,6 @@ module.exports = {
         init: {
           exposeGlobals: true,
         },
-      },
-      session: {
-        server: 'http://localhost:8081',
-        sessionId: 'test'
       },
       artifacts: {
         rootDir: './artifacts',

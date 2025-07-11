@@ -110,21 +110,32 @@ jobs:
           CI: true
         run: |
           echo "Starting Metro bundler..."
-          pnpm start &
+          # Start Metro in the background
+          nohup pnpm start > metro.log 2>&1 &
           # Give Metro a moment to start up
-          sleep 10
-          echo "Metro bundler started"
+          sleep 15
+          # Verify Metro is running
+          if grep -q "Metro waiting on" metro.log; then
+            echo "Metro bundler started successfully"
+            cat metro.log
+          else
+            echo "Metro bundler failed to start properly:"
+            cat metro.log
+            exit 1
+          fi
 
       - name: Run Detox Tests
         working-directory: examples/TestApp
         env:
           E2EWRAPPER_LOG: debug
           CI: true
+          # Make sure RCT_METRO_PORT is set to match the Metro bundler port
+          RCT_METRO_PORT: 8081
         run: |
           if [[ "${{ inputs.platform }}" == "android" ]]; then
-            pnpm e2e:android:run --debug-synchronization 1000
+            pnpm e2e:android:run --debug-synchronization 1000 --record-logs all
           else
-            pnpm e2e:ios:run --debug-synchronization 1000
+            pnpm e2e:ios:run --debug-synchronization 1000 --record-logs all
           fi
 
       # Archive test artifacts

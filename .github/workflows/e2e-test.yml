@@ -103,10 +103,23 @@ jobs:
             pnpm e2e:ios:build
           fi
 
+      # Start Metro bundler in the background
+      - name: Start Metro
+        working-directory: examples/TestApp
+        env:
+          CI: true
+        run: |
+          echo "Starting Metro bundler..."
+          pnpm start &
+          # Give Metro a moment to start up
+          sleep 10
+          echo "Metro bundler started"
+
       - name: Run Detox Tests
         working-directory: examples/TestApp
         env:
           E2EWRAPPER_LOG: debug
+          CI: true
         run: |
           if [[ "${{ inputs.platform }}" == "android" ]]; then
             pnpm e2e:android:run --debug-synchronization 1000

@@ -56,6 +56,16 @@ module.exports = {
     'ios.sim.debug': {
       device: 'simulator',
       app: 'ios.debug',
+      behavior: {
+        launchApp: 'auto',
+        init: {
+          exposeGlobals: true,
+        },
+      },
+      session: {
+        server: 'http://localhost:8081',
+        sessionId: 'test'
+      },
       artifacts: {
         rootDir: './artifacts',
         plugins: {
@@ -102,6 +112,16 @@ module.exports = {
     'android.att.debug': {
       device: 'attached',
       app: 'android.debug',
+      behavior: {
+        launchApp: 'auto',
+        init: {
+          exposeGlobals: true,
+        },
+      },
+      session: {
+        server: 'http://localhost:8081',
+        sessionId: 'test'
+      },
       artifacts: {
         rootDir: './artifacts',
         plugins: {
@@ -148,6 +168,16 @@ module.exports = {
     'android.emu.debug': {
       device: 'emulator',
       app: 'android.debug',
+      behavior: {
+        launchApp: 'auto',
+        init: {
+          exposeGlobals: true,
+        },
+      },
+      session: {
+        server: 'http://localhost:8081',
+        sessionId: 'test'
+      },
       artifacts: {
         rootDir: './artifacts',
         plugins: {

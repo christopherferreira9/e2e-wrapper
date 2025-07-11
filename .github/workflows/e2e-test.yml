@@ -82,6 +82,10 @@ jobs:
       - name: Install iOS dependencies (iOS)
         if: inputs.platform == 'ios'
         run: |
+          # Install applesimutils (required by Detox for iOS testing)
+          brew tap wix/brew
+          brew install applesimutils
+          
           # Install example app dependencies first to make sure React Native is available
           cd examples/TestApp
           pnpm install

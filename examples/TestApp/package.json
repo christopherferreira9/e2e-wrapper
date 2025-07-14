@@ -10,10 +10,12 @@
     "start:ci": "react-native start --host 0.0.0.0",
     "test": "jest",
     "e2e:ios:build": "detox build --configuration ios.sim.debug",
+    "e2e:ios:build:ci": "detox build --configuration ios.sim.release",
     "e2e:ios:run": "detox test --configuration ios.sim.debug",
     "e2e:ios:debug": "E2EWRAPPER_LOG=debug detox test --configuration ios.sim.debug",
     "e2e:ios:info": "E2EWRAPPER_LOG=info detox test --configuration ios.sim.debug",
     "e2e:android:build": "detox build --configuration android.emu.debug",
+    "e2e:android:build:ci": "detox build --configuration android.emu.release",
     "e2e:android:run": "detox test --configuration android.emu.debug"
   },
   "packageManager": "pnpm@9.11.0",

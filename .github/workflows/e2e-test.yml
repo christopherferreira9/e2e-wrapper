@@ -106,21 +106,8 @@ jobs:
             # Build the app with Detox
             pnpm e2e:android:build
           else
-            # Create a production bundle for iOS
-            cd ios/TestApp
-            pnpm react-native bundle --platform ios --dev false --entry-file ../../index.js --bundle-output main.jsbundle --assets-dest ./
-            
-            # Make the script executable
-            chmod +x ../add-bundle.sh
-            
-            # Build the app with Detox
-            cd ../..
-            pnpm e2e:ios:build
-            
-            # Run the script to add the bundle to the app
-            cd ios/TestApp
-            ../add-bundle.sh
-            cd ../..
+            # Build the app with Detox using release configuration
+            pnpm e2e:ios:build:ci
           fi
 
       # Run Detox tests without Metro
@@ -133,7 +120,8 @@ jobs:
           if [[ "${{ inputs.platform }}" == "android" ]]; then
             pnpm e2e:android:run --debug-synchronization 1000 --record-logs all
           else
-            pnpm e2e:ios:run --debug-synchronization 1000 --record-logs all
+            # Run tests using release configuration
+            detox test --configuration ios.sim.release --debug-synchronization 1000 --record-logs all
           fi
 
       # Archive test artifacts

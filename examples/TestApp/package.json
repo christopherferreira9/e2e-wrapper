@@ -12,6 +12,7 @@
     "e2e:ios:build": "detox build --configuration ios.sim.debug",
     "e2e:ios:build:ci": "detox build --configuration ios.sim.release",
     "e2e:ios:run": "detox test --configuration ios.sim.debug",
+    "e2e:ios:run:ci": "detox test --configuration ios.sim.release",
     "e2e:ios:debug": "E2EWRAPPER_LOG=debug detox test --configuration ios.sim.debug",
     "e2e:ios:info": "E2EWRAPPER_LOG=info detox test --configuration ios.sim.debug",
     "e2e:android:build": "detox build --configuration android.emu.debug",

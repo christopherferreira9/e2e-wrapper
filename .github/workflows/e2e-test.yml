@@ -121,7 +121,7 @@ jobs:
             pnpm e2e:android:run --debug-synchronization 1000 --record-logs all
           else
             # Run tests using release configuration
-            detox test --configuration ios.sim.release --debug-synchronization 1000 --record-logs all
+            pnpm e2e:ios:run:ci --debug-synchronization 1000 --record-logs all
           fi
 
       # Archive test artifacts

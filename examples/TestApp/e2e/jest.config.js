@@ -13,7 +13,6 @@ module.exports = {
     '^.+\\.(ts|tsx)$': 'ts-jest'
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-  setupFilesAfterEnv: ['<rootDir>/e2e/init.ts'],
   globals: {
     'ts-jest': {
       useESM: true

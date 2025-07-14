@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -93,94 +95,39 @@ jobs:
           bundle install
           pod install
       
-      # Build and run Detox tests
+      # Build the app for testing
       - name: Build Detox App
         working-directory: examples/TestApp
         env:
           CI: true
         run: |
           if [[ "${{ inputs.platform }}" == "android" ]]; then
-            # Create a production bundle for Android
-            mkdir -p android/app/src/main/assets
-            pnpm react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
-            # Build the app with Detox
             pnpm e2e:android:build
           else
-            # Build the app with Detox using release configuration
-            pnpm e2e:ios:build:ci
+            pnpm e2e:ios:build
           fi
-          
-      # Initialize Detox for iOS
-      - name: Initialize Detox (iOS)
-        if: inputs.platform == 'ios'
+      
+      # Start Metro server in the background
+      - name: Start Metro Server
         working-directory: examples/TestApp
         run: |
-          # Create a simple script to initialize Detox
-          cat > init-detox.js << 'EOF'
-          const { execSync } = require('child_process');
-          
-          function runCommand(command) {
-            console.log(`Running command: ${command}`);
-            try {
-              const output = execSync(command, { encoding: 'utf8', stdio: 'inherit' });
-              return output;
-            } catch (error) {
-              console.error(`Command failed: ${command}`);
-              console.error(error);
-              return null;
-            }
-          }
-          
-          async function init() {
-            try {
-              console.log('Preparing Detox environment...');
-              
-              // Check Detox CLI version
-              runCommand('npx detox --version');
-              
-              // List available iOS simulators
-              console.log('Available iOS simulators:');
-              runCommand('xcrun simctl list devices');
-              
-              // Ensure the app is built
-              console.log('Checking build artifacts...');
-              runCommand('ls -la ios/build/Build/Products/Release-iphonesimulator/');
-              
-              // Manually initialize the simulator
-              console.log('Booting simulator...');
-              runCommand('xcrun simctl boot "iPhone 16 Pro"');
-              
-              // Wait for simulator to be ready
-              console.log('Waiting for simulator to be ready...');
-              await new Promise(resolve => setTimeout(resolve, 5000));
-              
-              console.log('Initialization complete');
-              process.exit(0);
-            } catch (error) {
-              console.error('Initialization failed:', error);
-              process.exit(1);
-            }
-          }
-          
-          init();
-          EOF
-          
-          # Run the initialization script
-          node init-detox.js
+          echo "Starting Metro server..."
+          nohup pnpm start &
+          # Give Metro server time to start
+          sleep 10
+          echo "Metro server started"
 
-      # Run Detox tests without Metro
+      # Run Detox tests
       - name: Run Detox Tests
         working-directory: examples/TestApp
         env:
           E2EWRAPPER_LOG: debug
           CI: true
-          DETOX_START_TIMEOUT: 300000
         run: |
           if [[ "${{ inputs.platform }}" == "android" ]]; then
             pnpm e2e:android:run --debug-synchronization 1000 --record-logs all
           else
-            # Run tests using release configuration with detailed logging
-            DETOX_LOGLEVEL=trace pnpm e2e:ios:run:ci --debug-synchronization 1000 --record-logs all --reuse
+            pnpm e2e:ios:run --debug-synchronization 1000 --record-logs all
           fi
 
       # Archive test artifacts

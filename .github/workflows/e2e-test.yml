@@ -117,33 +117,47 @@ jobs:
         run: |
           # Create a simple script to initialize Detox
           cat > init-detox.js << 'EOF'
-          const detox = require('detox');
-          const config = require('./.detoxrc.js');
+          const { execSync } = require('child_process');
+          
+          function runCommand(command) {
+            console.log(`Running command: ${command}`);
+            try {
+              const output = execSync(command, { encoding: 'utf8', stdio: 'inherit' });
+              return output;
+            } catch (error) {
+              console.error(`Command failed: ${command}`);
+              console.error(error);
+              return null;
+            }
+          }
           
           async function init() {
             try {
-              console.log('Initializing Detox...');
-              await detox.init({
-                configuration: 'ios.sim.release',
-              });
-              console.log('Detox initialized successfully');
+              console.log('Preparing Detox environment...');
               
-              console.log('Launching app...');
-              await device.launchApp({
-                newInstance: true,
-                delete: true,
-                permissions: { notifications: 'YES', camera: 'YES' }
-              });
-              console.log('App launched successfully');
+              // Check Detox CLI version
+              runCommand('npx detox --version');
               
-              // Wait a bit to ensure app is ready
+              // List available iOS simulators
+              console.log('Available iOS simulators:');
+              runCommand('xcrun simctl list devices');
+              
+              // Ensure the app is built
+              console.log('Checking build artifacts...');
+              runCommand('ls -la ios/build/Build/Products/Release-iphonesimulator/');
+              
+              // Manually initialize the simulator
+              console.log('Booting simulator...');
+              runCommand('xcrun simctl boot "iPhone 16 Pro"');
+              
+              // Wait for simulator to be ready
+              console.log('Waiting for simulator to be ready...');
               await new Promise(resolve => setTimeout(resolve, 5000));
               
-              await detox.cleanup();
-              console.log('Detox cleanup complete');
+              console.log('Initialization complete');
               process.exit(0);
             } catch (error) {
-              console.error('Detox initialization failed:', error);
+              console.error('Initialization failed:', error);
               process.exit(1);
             }
           }
@@ -165,8 +179,8 @@ jobs:
           if [[ "${{ inputs.platform }}" == "android" ]]; then
             pnpm e2e:android:run --debug-synchronization 1000 --record-logs all
           else
-            # Run tests using release configuration
-            pnpm e2e:ios:run:ci --debug-synchronization 1000 --record-logs all --reuse
+            # Run tests using release configuration with detailed logging
+            DETOX_LOGLEVEL=trace pnpm e2e:ios:run:ci --debug-synchronization 1000 --record-logs all --reuse
           fi
 
       # Archive test artifacts

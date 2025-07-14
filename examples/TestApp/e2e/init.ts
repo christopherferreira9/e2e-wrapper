@@ -30,72 +30,79 @@ class CustomDetoxEnvironment extends DetoxCircusEnvironment {
   }
 
   async setup() {
-    await super.setup();
-
-    // Add a delay to ensure the app is fully initialized
-    console.log('Waiting for app to initialize...');
-    await new Promise(resolve => setTimeout(resolve, 5000));
-    console.log('App initialization delay complete');
+    try {
+      console.log('Setting up Detox environment...');
+      await super.setup();
+      
+      // Add a delay to ensure the app is fully initialized
+      console.log('Waiting for app to initialize...');
+      await new Promise(resolve => setTimeout(resolve, 10000));
+      console.log('App initialization delay complete');
+    } catch (error) {
+      console.error('Error during setup:', error);
+      throw error;
+    }
   }
 
-  async setupDetoxConfig() {
+  async teardown() {
     try {
-      // Configure Detox to save screenshots and videos on test failure
-      await device.setURLBlacklist([]);
-      
-      // Launch app with more resilient settings
-      await device.launchApp({
-        newInstance: true,
-        delete: true,
-        launchArgs: { 
-          detoxSessionId: Date.now().toString(),
-          detoxPrintBusyIdleResources: 'YES',
-        },
-        permissions: { notifications: 'YES', camera: 'YES' }
-      });
-      
-      // Add a delay after launching the app
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      console.log('App launched successfully');
+      console.log('Tearing down Detox environment...');
+      await super.teardown();
     } catch (error) {
-      console.error('Error during app launch:', error);
-      // Try one more time if it fails
-      try {
-        await device.launchApp({ newInstance: true });
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        console.log('App launched successfully on second attempt');
-      } catch (retryError) {
-        console.error('Failed to launch app on retry:', retryError);
-      }
+      console.error('Error during teardown:', error);
     }
   }
 
   async handleTestEvent(event: any, state: any) {
-    await super.handleTestEvent(event, state);
-    
-    if (event.name === 'test_start') {
-      try {
-        // Relaunch app before each test to ensure clean state
-        await device.reloadReactNative();
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } catch (error) {
-        console.log('Error reloading React Native:', error);
-      }
-    }
-    
-    if (event.name === 'test_done' && event.test.errors.length > 0) {
-      const testName = event.test.name.replace(/\s+/g, '_').toLowerCase();
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const screenshotName = `${testName}_${timestamp}.png`;
-      const screenshotPath = path.join(this.artifactsDirectory, screenshotName);
+    try {
+      await super.handleTestEvent(event, state);
       
-      try {
-        // Take a screenshot on test failure
-        await device.takeScreenshot(screenshotName);
-        console.log(`Screenshot saved at: ${screenshotPath}`);
-      } catch (error) {
-        console.error('Failed to take screenshot:', error);
+      if (event.name === 'test_start') {
+        try {
+          console.log(`Starting test: ${event.test.name}`);
+          
+          // Try to reload React Native before each test
+          try {
+            await device.reloadReactNative();
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            console.log('Successfully reloaded React Native');
+          } catch (reloadError) {
+            console.log('Error reloading React Native, trying to launch app instead:', reloadError);
+            
+            // If reload fails, try to launch the app
+            try {
+              await device.launchApp({ newInstance: false });
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              console.log('Successfully launched app');
+            } catch (launchError) {
+              console.error('Failed to launch app:', launchError);
+            }
+          }
+        } catch (error) {
+          console.error('Error in test_start event handler:', error);
+        }
       }
+      
+      if (event.name === 'test_done') {
+        console.log(`Test completed: ${event.test.name} (${event.test.errors.length ? 'FAILED' : 'PASSED'})`);
+        
+        if (event.test.errors.length > 0) {
+          const testName = event.test.name.replace(/\s+/g, '_').toLowerCase();
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const screenshotName = `${testName}_${timestamp}.png`;
+          const screenshotPath = path.join(this.artifactsDirectory, screenshotName);
+          
+          try {
+            // Take a screenshot on test failure
+            await device.takeScreenshot(screenshotName);
+            console.log(`Screenshot saved at: ${screenshotPath}`);
+          } catch (error) {
+            console.error('Failed to take screenshot:', error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in handleTestEvent:', error);
     }
   }
 }

@@ -12,16 +12,20 @@ if !target
   exit 1
 end
 
+# Create or find a group for bundle assets
+bundle_group = project.main_group.find_subpath('bundle', true)
+
+# Add the bundle file to the project
+bundle_file_path = '../bundle/index.ios.jsbundle'
+bundle_ref = bundle_group.new_file(bundle_file_path)
+
 # Find the build phase that copies bundle resources
 resources_phase = target.build_phases.find { |phase| phase.is_a?(Xcodeproj::Project::Object::PBXResourcesBuildPhase) }
 
-# Add the bundle file to the resources build phase
-bundle_ref = project.new_file('bundle/index.ios.jsbundle')
+# Add the file reference to the resources build phase
 resources_phase.add_file_reference(bundle_ref)
 
-# Also add the assets
-assets_dir = project.new_group('bundle')
-bundle_ref.parent = assets_dir
+puts "Added bundle file to Xcode project"
 
 # Save the project
 project.save 

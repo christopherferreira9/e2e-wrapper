@@ -62,6 +62,10 @@ module.exports = {
           exposeGlobals: true,
         },
       },
+      launchArgs: {
+        detoxEnableSynchronization: true,
+        detoxURLBlacklistRegex: '(\\/log$)|(\\/symbolicate$)'
+      },
       artifacts: {
         rootDir: './artifacts',
         plugins: {
@@ -165,6 +169,10 @@ module.exports = {
         init: {
           exposeGlobals: true,
         },
+      },
+      launchArgs: {
+        detoxEnableSynchronization: true,
+        detoxURLBlacklistRegex: '(\\/log$)|(\\/symbolicate$)'
       },
       artifacts: {
         rootDir: './artifacts',

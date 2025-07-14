@@ -108,11 +108,6 @@ jobs:
             # Create a production bundle for iOS
             mkdir -p ios/bundle
             pnpm react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ios/bundle/index.ios.jsbundle --assets-dest ios/bundle
-            # Make sure the ruby script is executable
-            chmod +x ios/use-bundled-js.rb
-            # Run the script to update the Xcode project to use the bundled JS
-            cd ios && bundle exec ruby use-bundled-js.rb
-            cd ..
             # Build the app with Detox
             pnpm e2e:ios:build
           fi
@@ -123,6 +118,8 @@ jobs:
         env:
           E2EWRAPPER_LOG: debug
           CI: true
+          # For iOS, tell the app where to find the bundle
+          BUNDLE_PATH: ${{ inputs.platform == 'ios' && './ios/bundle/index.ios.jsbundle' || '' }}
         run: |
           if [[ "${{ inputs.platform }}" == "android" ]]; then
             pnpm e2e:android:run --debug-synchronization 1000 --record-logs all

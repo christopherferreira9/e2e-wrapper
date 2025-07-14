@@ -96,41 +96,33 @@ jobs:
       # Build and run Detox tests
       - name: Build Detox App
         working-directory: examples/TestApp
-        run: |
-          if [[ "${{ inputs.platform }}" == "android" ]]; then
-            pnpm e2e:android:build
-          else
-            pnpm e2e:ios:build
-          fi
-
-      # Start Metro bundler in the background
-      - name: Start Metro
-        working-directory: examples/TestApp
         env:
           CI: true
         run: |
-          echo "Starting Metro bundler..."
-          # Start Metro in the background
-          nohup pnpm start:ci > metro.log 2>&1 &
-          # Give Metro a moment to start up
-          sleep 15
-          # Verify Metro is running
-          if grep -q "Metro waiting on" metro.log; then
-            echo "Metro bundler started successfully"
-            cat metro.log
+          if [[ "${{ inputs.platform }}" == "android" ]]; then
+            # Create a production bundle for Android
+            pnpm react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
+            # Build the app with Detox
+            pnpm e2e:android:build
           else
-            echo "Metro bundler failed to start properly:"
-            cat metro.log
-            exit 1
+            # Create a production bundle for iOS
+            mkdir -p ios/bundle
+            pnpm react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ios/bundle/index.ios.jsbundle --assets-dest ios/bundle
+            # Make sure the ruby script is executable
+            chmod +x ios/use-bundled-js.rb
+            # Run the script to update the Xcode project to use the bundled JS
+            cd ios && bundle exec ruby use-bundled-js.rb
+            cd ..
+            # Build the app with Detox
+            pnpm e2e:ios:build
           fi
 
+      # Run Detox tests without Metro
       - name: Run Detox Tests
         working-directory: examples/TestApp
         env:
           E2EWRAPPER_LOG: debug
           CI: true
-          # Make sure RCT_METRO_PORT is set to match the Metro bundler port
-          RCT_METRO_PORT: 8081
         run: |
           if [[ "${{ inputs.platform }}" == "android" ]]; then
             pnpm e2e:android:run --debug-synchronization 1000 --record-logs all

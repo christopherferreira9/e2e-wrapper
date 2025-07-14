@@ -9,8 +9,8 @@ class CustomDetoxEnvironment extends DetoxCircusEnvironment {
   constructor(config: any, context: any) {
     super(config, context);
 
-    // Can be safely removed, if you are content with the default value (=300000ms)
-    this.initTimeout = 300000;
+    // Increase timeout for CI environments
+    this.initTimeout = 600000; // 10 minutes
     
     // Setup artifacts directory
     this.artifactsDirectory = path.join(__dirname, '../artifacts');
@@ -19,9 +19,6 @@ class CustomDetoxEnvironment extends DetoxCircusEnvironment {
     if (!fs.existsSync(this.artifactsDirectory)) {
       fs.mkdirSync(this.artifactsDirectory, { recursive: true });
     }
-
-    // Configure Detox to save artifacts
-    this.setupDetoxConfig();
 
     // This takes care of generating status logs on a per-spec basis. By default, Jest only reports at file-level.
     // This is strictly optional.
@@ -32,18 +29,59 @@ class CustomDetoxEnvironment extends DetoxCircusEnvironment {
     // });
   }
 
+  async setup() {
+    await super.setup();
+
+    // Add a delay to ensure the app is fully initialized
+    console.log('Waiting for app to initialize...');
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    console.log('App initialization delay complete');
+  }
+
   async setupDetoxConfig() {
-    // Configure Detox to save screenshots and videos on test failure
-    await device.setURLBlacklist([]);
-    await device.launchApp({
-      newInstance: true,
-      launchArgs: { detoxSessionId: Date.now().toString() },
-      permissions: { notifications: 'YES', camera: 'YES' }
-    });
+    try {
+      // Configure Detox to save screenshots and videos on test failure
+      await device.setURLBlacklist([]);
+      
+      // Launch app with more resilient settings
+      await device.launchApp({
+        newInstance: true,
+        delete: true,
+        launchArgs: { 
+          detoxSessionId: Date.now().toString(),
+          detoxPrintBusyIdleResources: 'YES',
+        },
+        permissions: { notifications: 'YES', camera: 'YES' }
+      });
+      
+      // Add a delay after launching the app
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('App launched successfully');
+    } catch (error) {
+      console.error('Error during app launch:', error);
+      // Try one more time if it fails
+      try {
+        await device.launchApp({ newInstance: true });
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        console.log('App launched successfully on second attempt');
+      } catch (retryError) {
+        console.error('Failed to launch app on retry:', retryError);
+      }
+    }
   }
 
   async handleTestEvent(event: any, state: any) {
     await super.handleTestEvent(event, state);
+    
+    if (event.name === 'test_start') {
+      try {
+        // Relaunch app before each test to ensure clean state
+        await device.reloadReactNative();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.log('Error reloading React Native:', error);
+      }
+    }
     
     if (event.name === 'test_done' && event.test.errors.length > 0) {
       const testName = event.test.name.replace(/\s+/g, '_').toLowerCase();

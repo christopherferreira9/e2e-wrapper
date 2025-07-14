@@ -109,6 +109,50 @@ jobs:
             # Build the app with Detox using release configuration
             pnpm e2e:ios:build:ci
           fi
+          
+      # Initialize Detox for iOS
+      - name: Initialize Detox (iOS)
+        if: inputs.platform == 'ios'
+        working-directory: examples/TestApp
+        run: |
+          # Create a simple script to initialize Detox
+          cat > init-detox.js << 'EOF'
+          const detox = require('detox');
+          const config = require('./.detoxrc.js');
+          
+          async function init() {
+            try {
+              console.log('Initializing Detox...');
+              await detox.init({
+                configuration: 'ios.sim.release',
+              });
+              console.log('Detox initialized successfully');
+              
+              console.log('Launching app...');
+              await device.launchApp({
+                newInstance: true,
+                delete: true,
+                permissions: { notifications: 'YES', camera: 'YES' }
+              });
+              console.log('App launched successfully');
+              
+              // Wait a bit to ensure app is ready
+              await new Promise(resolve => setTimeout(resolve, 5000));
+              
+              await detox.cleanup();
+              console.log('Detox cleanup complete');
+              process.exit(0);
+            } catch (error) {
+              console.error('Detox initialization failed:', error);
+              process.exit(1);
+            }
+          }
+          
+          init();
+          EOF
+          
+          # Run the initialization script
+          node init-detox.js
 
       # Run Detox tests without Metro
       - name: Run Detox Tests
@@ -116,12 +160,13 @@ jobs:
         env:
           E2EWRAPPER_LOG: debug
           CI: true
+          DETOX_START_TIMEOUT: 300000
         run: |
           if [[ "${{ inputs.platform }}" == "android" ]]; then
             pnpm e2e:android:run --debug-synchronization 1000 --record-logs all
           else
             # Run tests using release configuration
-            pnpm e2e:ios:run:ci --debug-synchronization 1000 --record-logs all
+            pnpm e2e:ios:run:ci --debug-synchronization 1000 --record-logs all --reuse
           fi
 
       # Archive test artifacts

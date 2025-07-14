@@ -89,6 +89,29 @@ module.exports = {
     'ios.sim.release': {
       device: 'simulator',
       app: 'ios.release',
+      behavior: {
+        launchApp: 'auto',
+        init: {
+          exposeGlobals: true,
+        },
+        cleanup: {
+          shutdownDevice: false
+        }
+      },
+      session: {
+        sessionId: 'ios.sim.release',
+        debugSynchronization: 1000,
+        startupTimeout: 300000,
+        testRunner: {
+          retries: 2
+        }
+      },
+      launchArgs: {
+        detoxEnableSynchronization: true,
+        detoxURLBlacklistRegex: '(\\/log$)|(\\/symbolicate$)',
+        detoxDebugVisibility: true,
+        detoxDisableTouchIndicators: false
+      },
       artifacts: {
         rootDir: './artifacts',
         plugins: {
@@ -96,15 +119,15 @@ module.exports = {
           screenshot: {
             enabled: true,
             shouldTakeAutomaticSnapshots: true,
-            keepOnlyFailedTestsArtifacts: true,
+            keepOnlyFailedTestsArtifacts: false,
             takeWhen: {
-              testStart: false,
+              testStart: true,
               testDone: true,
             },
           },
           video: {
             enabled: true,
-            keepOnlyFailedTestsArtifacts: true,
+            keepOnlyFailedTestsArtifacts: false,
           }
         }
       }

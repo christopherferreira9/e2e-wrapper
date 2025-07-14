@@ -107,13 +107,20 @@ jobs:
             pnpm e2e:android:build
           else
             # Create a production bundle for iOS
-            mkdir -p ios/bundle
-            pnpm react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ios/bundle/index.ios.jsbundle --assets-dest ios/bundle
+            cd ios/TestApp
+            pnpm react-native bundle --platform ios --dev false --entry-file ../../index.js --bundle-output main.jsbundle --assets-dest ./
+            
+            # Make the script executable
+            chmod +x ../add-bundle.sh
             
             # Build the app with Detox
-            export BUNDLE_PATH="$(pwd)/ios/bundle/index.ios.jsbundle"
-            echo "Using bundle path: $BUNDLE_PATH"
+            cd ../..
             pnpm e2e:ios:build
+            
+            # Run the script to add the bundle to the app
+            cd ios/TestApp
+            ../add-bundle.sh
+            cd ../..
           fi
 
       # Run Detox tests without Metro
@@ -122,13 +129,10 @@ jobs:
         env:
           E2EWRAPPER_LOG: debug
           CI: true
-          # For iOS, provide the absolute path to the bundle
-          BUNDLE_PATH: ${{ inputs.platform == 'ios' && '${{ github.workspace }}/examples/TestApp/ios/bundle/index.ios.jsbundle' || '' }}
         run: |
           if [[ "${{ inputs.platform }}" == "android" ]]; then
             pnpm e2e:android:run --debug-synchronization 1000 --record-logs all
           else
-            echo "Using bundle path: $BUNDLE_PATH"
             pnpm e2e:ios:run --debug-synchronization 1000 --record-logs all
           fi
 

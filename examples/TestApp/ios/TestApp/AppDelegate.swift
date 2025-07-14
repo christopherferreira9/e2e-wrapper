@@ -39,17 +39,28 @@ class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
   }
 
   override func bundleURL() -> URL? {
-    // Check if we're in CI and have a specific bundle path set
-    if let bundlePath = ProcessInfo.processInfo.environment["BUNDLE_PATH"] {
+    // First try to find the bundle in the app bundle
+    if let bundleURL = Bundle.main.url(forResource: "main", withExtension: "jsbundle") {
+      print("Loading JS bundle from app bundle: \(bundleURL)")
+      return bundleURL
+    }
+    
+    // If we're in CI, check for a specific file in the app's directory
+    let bundlePath = Bundle.main.bundlePath + "/main.jsbundle"
+    let fileManager = FileManager.default
+    if fileManager.fileExists(atPath: bundlePath) {
       let url = URL(fileURLWithPath: bundlePath)
-      print("Loading JS bundle from custom path: \(url)")
+      print("Loading JS bundle from: \(url)")
       return url
     }
     
+    // Fall back to Metro in debug mode
 #if DEBUG
+    print("Loading JS bundle from Metro")
     return RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
 #else
-    return Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+    print("No bundle found!")
+    return nil
 #endif
   }
 }

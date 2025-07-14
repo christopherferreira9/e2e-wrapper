@@ -101,6 +101,7 @@ jobs:
         run: |
           if [[ "${{ inputs.platform }}" == "android" ]]; then
             # Create a production bundle for Android
+            mkdir -p android/app/src/main/assets
             pnpm react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
             # Build the app with Detox
             pnpm e2e:android:build
@@ -108,7 +109,10 @@ jobs:
             # Create a production bundle for iOS
             mkdir -p ios/bundle
             pnpm react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ios/bundle/index.ios.jsbundle --assets-dest ios/bundle
+            
             # Build the app with Detox
+            export BUNDLE_PATH="$(pwd)/ios/bundle/index.ios.jsbundle"
+            echo "Using bundle path: $BUNDLE_PATH"
             pnpm e2e:ios:build
           fi
 
@@ -118,12 +122,13 @@ jobs:
         env:
           E2EWRAPPER_LOG: debug
           CI: true
-          # For iOS, tell the app where to find the bundle
-          BUNDLE_PATH: ${{ inputs.platform == 'ios' && './ios/bundle/index.ios.jsbundle' || '' }}
+          # For iOS, provide the absolute path to the bundle
+          BUNDLE_PATH: ${{ inputs.platform == 'ios' && '${{ github.workspace }}/examples/TestApp/ios/bundle/index.ios.jsbundle' || '' }}
         run: |
           if [[ "${{ inputs.platform }}" == "android" ]]; then
             pnpm e2e:android:run --debug-synchronization 1000 --record-logs all
           else
+            echo "Using bundle path: $BUNDLE_PATH"
             pnpm e2e:ios:run --debug-synchronization 1000 --record-logs all
           fi
 

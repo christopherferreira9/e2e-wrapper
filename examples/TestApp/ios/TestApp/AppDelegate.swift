@@ -39,10 +39,17 @@ class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
   }
 
   override func bundleURL() -> URL? {
+    // Check if we're in CI and have a specific bundle path set
+    if let bundlePath = ProcessInfo.processInfo.environment["BUNDLE_PATH"] {
+      let url = URL(fileURLWithPath: bundlePath)
+      print("Loading JS bundle from custom path: \(url)")
+      return url
+    }
+    
 #if DEBUG
-    RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
+    return RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
 #else
-    Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+    return Bundle.main.url(forResource: "main", withExtension: "jsbundle")
 #endif
   }
 }

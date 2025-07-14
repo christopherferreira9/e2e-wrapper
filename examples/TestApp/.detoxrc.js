@@ -58,10 +58,23 @@ module.exports = {
         init: {
           exposeGlobals: true,
         },
+        cleanup: {
+          shutdownDevice: false
+        }
+      },
+      session: {
+        sessionId: 'ios.sim.debug',
+        debugSynchronization: 1000,
+        startupTimeout: 300000,
+        testRunner: {
+          retries: 2
+        }
       },
       launchArgs: {
         detoxEnableSynchronization: true,
-        detoxURLBlacklistRegex: '(\\/log$)|(\\/symbolicate$)'
+        detoxURLBlacklistRegex: '(\\/log$)|(\\/symbolicate$)',
+        detoxDebugVisibility: true,
+        detoxDisableTouchIndicators: false
       },
       artifacts: {
         rootDir: './artifacts',

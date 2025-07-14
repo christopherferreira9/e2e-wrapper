@@ -95,6 +95,44 @@ jobs:
           bundle install
           pod install
       
+      # Start Metro server in the background
+      - name: Start Metro Server
+        working-directory: examples/TestApp
+        run: |
+          echo "Starting Metro server..."
+          # Create a metro log file
+          touch metro.log
+          
+          # Start Metro in the background and redirect output to the log file
+          nohup pnpm start > metro.log 2>&1 &
+          
+          # Store the PID of the Metro process
+          echo "METRO_PID=$!" >> $GITHUB_ENV
+          
+          # Wait for Metro to be fully started
+          echo "Waiting for Metro server to be ready..."
+          attempt=0
+          max_attempts=30
+          while [ $attempt -lt $max_attempts ]; do
+            if grep -q "Metro waiting on" metro.log || grep -q "React Native packager is running" metro.log; then
+              echo "Metro server is ready!"
+              break
+            fi
+            attempt=$((attempt+1))
+            echo "Waiting for Metro server... attempt $attempt/$max_attempts"
+            sleep 2
+          done
+          
+          if [ $attempt -eq $max_attempts ]; then
+            echo "Metro server failed to start properly. Logs:"
+            cat metro.log
+            exit 1
+          fi
+          
+          # Show the Metro logs
+          echo "Metro server logs:"
+          cat metro.log
+      
       # Build the app for testing
       - name: Build Detox App
         working-directory: examples/TestApp
@@ -107,15 +145,27 @@ jobs:
             pnpm e2e:ios:build
           fi
       
-      # Start Metro server in the background
-      - name: Start Metro Server
+      # Start capturing device logs
+      - name: Start capturing device logs
         working-directory: examples/TestApp
         run: |
-          echo "Starting Metro server..."
-          nohup pnpm start &
-          # Give Metro server time to start
-          sleep 10
-          echo "Metro server started"
+          mkdir -p device_logs
+          if [[ "${{ inputs.platform }}" == "android" ]]; then
+            # Start capturing Android logs
+            nohup adb logcat > device_logs/android.log 2>&1 &
+            echo "LOGCAT_PID=$!" >> $GITHUB_ENV
+          else
+            # Get the UDID of the booted simulator
+            UDID=$(xcrun simctl list devices | grep -i "booted" | grep -o "([^)]*)" | grep -o "[^()]*")
+            if [ -n "$UDID" ]; then
+              echo "Found booted simulator with UDID: $UDID"
+              # Start capturing iOS logs
+              nohup xcrun simctl spawn $UDID log stream --level debug > device_logs/ios.log 2>&1 &
+              echo "SIMLOG_PID=$!" >> $GITHUB_ENV
+            else
+              echo "No booted simulator found, will boot one for testing"
+            fi
+          fi
 
       # Run Detox tests
       - name: Run Detox Tests
@@ -123,11 +173,34 @@ jobs:
         env:
           E2EWRAPPER_LOG: debug
           CI: true
+          DETOX_LOGLEVEL: trace
         run: |
           if [[ "${{ inputs.platform }}" == "android" ]]; then
             pnpm e2e:android:run --debug-synchronization 1000 --record-logs all
           else
             pnpm e2e:ios:run --debug-synchronization 1000 --record-logs all
+          fi
+      
+      # Stop capturing device logs
+      - name: Stop capturing device logs
+        if: always()
+        run: |
+          if [ -n "$LOGCAT_PID" ]; then
+            echo "Stopping Android logcat capture (PID: $LOGCAT_PID)..."
+            kill $LOGCAT_PID || true
+          fi
+          if [ -n "$SIMLOG_PID" ]; then
+            echo "Stopping iOS simulator log capture (PID: $SIMLOG_PID)..."
+            kill $SIMLOG_PID || true
+          fi
+      
+      # Kill Metro server when done
+      - name: Kill Metro Server
+        if: always()
+        run: |
+          if [ -n "$METRO_PID" ]; then
+            echo "Stopping Metro server (PID: $METRO_PID)..."
+            kill $METRO_PID || true
           fi
 
       # Archive test artifacts
@@ -137,4 +210,6 @@ jobs:
         with:
           name: e2e-test-artifacts
           path: |
-            examples/TestApp/artifacts 
+            examples/TestApp/artifacts
+            examples/TestApp/metro.log
+            examples/TestApp/device_logs 
